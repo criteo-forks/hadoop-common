@@ -2,6 +2,8 @@ Hadoop YARN Change Log
 
 Criteo Release
 
+    YARN-2056. Disable preemption at Queue level (Eric Payne via jlowe)
+
    YARN-4024. YARN RM should avoid unnecessary resolving IP when NMs doing heartbeat.
    (Hong Zhiguo via wangda)
 
@@ -116,7 +118,7 @@ Release 2.6.0 - 2014-11-18
     YARN-2581. Passed LogAggregationContext to NM via ContainerTokenIdentifier.
     (Xuan Gong via zjshen)
 
-    YARN-2613. Support retry in NMClient for rolling-upgrades. (Jian He via 
+    YARN-2613. Support retry in NMClient for rolling-upgrades. (Jian He via
     junping_du)
 
     YARN-1063. Augmented Hadoop common winutils to have the ability to create
