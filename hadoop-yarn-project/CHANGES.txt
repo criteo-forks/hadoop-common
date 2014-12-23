@@ -2,6 +2,9 @@ Hadoop YARN Change Log
 
 Criteo Release
 
+   YARN-2920. Changed CapacityScheduler to kill containers on nodes where
+       node labels are changed. (Wangda Tan via jianhe)
+
    YARN-2800. Remove MemoryNodeLabelsStore and add a way to enable/disable
        node labels feature. (Wangda Tan via ozawa)
 

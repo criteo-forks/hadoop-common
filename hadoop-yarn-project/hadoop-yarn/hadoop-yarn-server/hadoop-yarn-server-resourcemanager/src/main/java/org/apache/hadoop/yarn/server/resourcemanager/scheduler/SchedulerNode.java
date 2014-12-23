@@ -23,6 +23,7 @@ import java.util.LinkedList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
@@ -35,10 +36,13 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.resource.Resources;
+
+import com.google.common.collect.ImmutableSet;
 
 
 /**
@@ -63,8 +67,11 @@ public abstract class SchedulerNode {
 
   private final RMNode rmNode;
   private final String nodeName;
-
-  public SchedulerNode(RMNode node, boolean usePortForNodeName) {
+  
+  private volatile Set<String> labels = null;
+  
+  public SchedulerNode(RMNode node, boolean usePortForNodeName,
+      Set<String> labels) {
     this.rmNode = node;
     this.availableResource = Resources.clone(node.getTotalCapability());
     this.totalResourceCapability = Resources.clone(node.getTotalCapability());
@@ -73,6 +80,11 @@ public abstract class SchedulerNode {
     } else {
       nodeName = rmNode.getHostName();
     }
+    this.labels = ImmutableSet.copyOf(labels);
+  }
+
+  public SchedulerNode(RMNode node, boolean usePortForNodeName) {
+    this(node, usePortForNodeName, CommonNodeLabelsManager.EMPTY_STRING_SET);
   }
 
   public RMNode getRMNode() {
@@ -293,5 +305,13 @@ public abstract class SchedulerNode {
       return;
     }
     allocateContainer(rmContainer);
+  }
+  
+  public Set<String> getLabels() {
+    return labels;
+  }
+  
+  public void updateLabels(Set<String> labels) {
+    this.labels = labels;
   }
 }
