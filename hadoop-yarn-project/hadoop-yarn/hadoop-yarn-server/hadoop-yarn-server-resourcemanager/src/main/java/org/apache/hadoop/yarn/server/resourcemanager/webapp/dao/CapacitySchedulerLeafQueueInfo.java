@@ -32,12 +32,12 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
   protected int numContainers;
   protected int maxApplications;
   protected int maxApplicationsPerUser;
-  protected int maxActiveApplications;
-  protected int maxActiveApplicationsPerUser;
   protected int userLimit;
   protected UsersInfo users; // To add another level in the XML
   protected float userLimitFactor;
   protected boolean preemptionDisabled;
+  protected ResourceInfo aMResourceLimit;
+  protected ResourceInfo userAMResourceLimit;
 
   CapacitySchedulerLeafQueueInfo() {
   };
@@ -49,12 +49,12 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     numContainers = q.getNumContainers();
     maxApplications = q.getMaxApplications();
     maxApplicationsPerUser = q.getMaxApplicationsPerUser();
-    maxActiveApplications = q.getMaximumActiveApplications();
-    maxActiveApplicationsPerUser = q.getMaximumActiveApplicationsPerUser();
     userLimit = q.getUserLimit();
     users = new UsersInfo(q.getUsers());
     userLimitFactor = q.getUserLimitFactor();
     preemptionDisabled = q.getPreemptionDisabled();
+    aMResourceLimit = new ResourceInfo(q.getAMResourceLimit());
+    userAMResourceLimit = new ResourceInfo(q.getUserAMResourceLimit());
   }
 
   public int getNumActiveApplications() {
@@ -77,14 +77,6 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
     return maxApplicationsPerUser;
   }
 
-  public int getMaxActiveApplications() {
-    return maxActiveApplications;
-  }
-
-  public int getMaxActiveApplicationsPerUser() {
-    return maxActiveApplicationsPerUser;
-  }
-
   public int getUserLimit() {
     return userLimit;
   }
@@ -100,5 +92,13 @@ public class CapacitySchedulerLeafQueueInfo extends CapacitySchedulerQueueInfo {
 
   public boolean getPreemptionDisabled() {
     return preemptionDisabled;
+  }
+  
+  public ResourceInfo getAMResourceLimit() {
+    return aMResourceLimit;
+  }
+  
+  public ResourceInfo getUserAMResourceLimit() {
+    return userAMResourceLimit; 
   }
 }

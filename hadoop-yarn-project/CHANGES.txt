@@ -55,6 +55,9 @@ Criteo Release
     YARN-3275. CapacityScheduler: Preemption happening on non-preemptable
     queues (Eric Payne via jlowe)
 
+    YARN-2637. Fixed max-am-resource-percent calculation in CapacityScheduler
+    when activating applications. (Craig Welch via jianhe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

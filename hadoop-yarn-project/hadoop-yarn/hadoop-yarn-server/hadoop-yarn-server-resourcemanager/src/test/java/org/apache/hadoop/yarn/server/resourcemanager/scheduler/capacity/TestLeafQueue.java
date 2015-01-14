@@ -98,6 +98,7 @@ public class TestLeafQueue {
 
   RMContext rmContext;
   RMContext spyRMContext;
+  ResourceRequest amResourceRequest;
   CapacityScheduler cs;
   CapacitySchedulerConfiguration csConf;
   CapacitySchedulerContext csContext;
@@ -121,6 +122,10 @@ public class TestLeafQueue {
         spy(new ConcurrentHashMap<ApplicationId, RMApp>());
     RMApp rmApp = mock(RMApp.class);
     when(rmApp.getRMAppAttempt((ApplicationAttemptId)Matchers.any())).thenReturn(null);
+    amResourceRequest = mock(ResourceRequest.class);
+    when(amResourceRequest.getCapability()).thenReturn(
+      Resources.createResource(0, 0));
+    when(rmApp.getAMResourceRequest()).thenReturn(amResourceRequest);
     Mockito.doReturn(rmApp).when(spyApps).get((ApplicationId)Matchers.any());
     when(spyRMContext.getRMApps()).thenReturn(spyApps);
     
@@ -259,6 +264,41 @@ public class TestLeafQueue {
         any(RMContainerEventType.class), any(CSQueue.class), anyBoolean());
     
     return queue;
+  }
+  
+  @Test
+  public void testInitializeQueue() throws Exception {
+    final float epsilon = 1e-5f;
+    //can add more sturdy test with 3-layer queues
+    //once MAPREDUCE:3410 is resolved
+    LeafQueue a = stubLeafQueue((LeafQueue)queues.get(A));
+    assertEquals(0.085, a.getCapacity(), epsilon);
+    assertEquals(0.085, a.getAbsoluteCapacity(), epsilon);
+    assertEquals(0.2, a.getMaximumCapacity(), epsilon);
+    assertEquals(0.2, a.getAbsoluteMaximumCapacity(), epsilon);
+
+    LeafQueue b = stubLeafQueue((LeafQueue)queues.get(B));
+    assertEquals(0.80, b.getCapacity(), epsilon);
+    assertEquals(0.80, b.getAbsoluteCapacity(), epsilon);
+    assertEquals(0.99, b.getMaximumCapacity(), epsilon);
+    assertEquals(0.99, b.getAbsoluteMaximumCapacity(), epsilon);
+
+    ParentQueue c = (ParentQueue)queues.get(C);
+    assertEquals(0.015, c.getCapacity(), epsilon);
+    assertEquals(0.015, c.getAbsoluteCapacity(), epsilon);
+    assertEquals(0.1, c.getMaximumCapacity(), epsilon);
+    assertEquals(0.1, c.getAbsoluteMaximumCapacity(), epsilon);
+
+	  //Verify the value for getAMResourceLimit for queues with < .1 maxcap
+	  Resource clusterResource = Resource.newInstance(50 * GB, 50);
+
+	  a.updateClusterResource(clusterResource);
+	  assertEquals(Resource.newInstance(1 * GB, 1),
+	    a.getAMResourceLimit());
+
+	  b.updateClusterResource(clusterResource);
+	  assertEquals(Resource.newInstance(5 * GB, 1),
+	    b.getAMResourceLimit());
   }
  
   @Test
@@ -953,7 +993,7 @@ public class TestLeafQueue {
     assertEquals(0*GB, app_0.getHeadroom().getMemory());
     assertEquals(0*GB, app_1.getHeadroom().getMemory());
     
-    // Check headroom for app_2 
+    // Check headroom for app_2
     app_1.updateResourceRequests(Collections.singletonList(     // unset
         TestUtils.createResourceRequest(ResourceRequest.ANY, 1*GB, 0, true,
             priority, recordFactory)));
@@ -1878,6 +1918,9 @@ public class TestLeafQueue {
     // Users
     final String user_e = "user_e";
 
+    when(amResourceRequest.getCapability()).thenReturn(
+      Resources.createResource(1 * GB, 0));
+
     // Submit applications
     final ApplicationAttemptId appAttemptId_0 =
         TestUtils.getMockApplicationAttemptId(0, 0);
@@ -1955,6 +1998,9 @@ public class TestLeafQueue {
 
     // Users
     final String user_e = "user_e";
+
+    when(amResourceRequest.getCapability()).thenReturn(
+      Resources.createResource(1 * GB, 0));
 
     // Submit applications
     final ApplicationAttemptId appAttemptId_0 =
@@ -2264,17 +2310,20 @@ public class TestLeafQueue {
     csConf.setCapacity(CapacitySchedulerConfiguration.ROOT + "." + A, 80);
     LeafQueue a = new LeafQueue(csContext, A, root, null);
     assertEquals(0.1f, a.getMaxAMResourcePerQueuePercent(), 1e-3f);
-
+    assertEquals(a.getAMResourceLimit(), Resources.createResource(160 * GB, 1));
+    
     csConf.setFloat(CapacitySchedulerConfiguration.
         MAXIMUM_APPLICATION_MASTERS_RESOURCE_PERCENT, 0.2f);
     LeafQueue newA = new LeafQueue(csContext, A, root, null);
     a.reinitialize(newA, clusterResource);
     assertEquals(0.2f, a.getMaxAMResourcePerQueuePercent(), 1e-3f);
+    assertEquals(a.getAMResourceLimit(), Resources.createResource(320 * GB, 1));
 
     Resource newClusterResource = Resources.createResource(100 * 20 * GB,
         100 * 32);
     a.updateClusterResource(newClusterResource);
     //  100 * 20 * 0.2 = 400
+    assertEquals(a.getAMResourceLimit(), Resources.createResource(400 * GB, 1));
   }
   
   @Test

@@ -1469,6 +1469,11 @@ public class RMAppImpl implements RMApp, Recoverable {
   public ReservationId getReservationId() {
     return submissionContext.getReservationID();
   }
+  
+  @Override
+  public ResourceRequest getAMResourceRequest() {
+    return this.amReq; 
+  }
 
   protected Credentials parseCredentials() throws IOException {
     Credentials credentials = new Credentials();
