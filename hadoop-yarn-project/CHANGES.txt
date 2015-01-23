@@ -2,6 +2,9 @@ Hadoop YARN Change Log
 
 Criteo Release
 
+   YARN-2800. Remove MemoryNodeLabelsStore and add a way to enable/disable
+       node labels feature. (Wangda Tan via ozawa)
+
    YARN-2786. Created a yarn cluster CLI and seeded with one command for listing
        node-labels collection. (Wangda Tan via vinodkv)
 

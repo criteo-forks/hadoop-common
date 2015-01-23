@@ -1636,7 +1636,6 @@ public class YarnConfiguration extends Configuration {
   public static final String YARN_HTTP_POLICY_DEFAULT = HttpConfig.Policy.HTTP_ONLY
       .name();
 
-
   /**
    * Max time to wait for NM to connection to RM.
    * When not set, proxy will fall back to use value of
@@ -1658,13 +1657,6 @@ public class YarnConfiguration extends Configuration {
    */
   public static final String NODE_LABELS_PREFIX = YARN_PREFIX + "node-labels.";
 
-  /**
-   * Class for RMNodeLabelsManager Please note this value should be consistent
-   * in client nodes and RM node(s)
-   */
-  public static final String RM_NODE_LABELS_MANAGER_CLASS = NODE_LABELS_PREFIX
-      + "manager-class";
-
   /** URI for NodeLabelManager */
   public static final String FS_NODE_LABELS_STORE_ROOT_DIR = NODE_LABELS_PREFIX
       + "fs-store.root-dir";
@@ -1672,6 +1664,14 @@ public class YarnConfiguration extends Configuration {
       NODE_LABELS_PREFIX + "fs-store.retry-policy-spec";
   public static final String DEFAULT_FS_NODE_LABELS_STORE_RETRY_POLICY_SPEC =
       "2000, 500";
+  
+  /**
+   * Flag to indicate if the node labels feature enabled, by default it's
+   * disabled
+   */
+  public static final String NODE_LABELS_ENABLED = NODE_LABELS_PREFIX
+      + "enabled";
+  public static final boolean DEFAULT_NODE_LABELS_ENABLED = false;
 
   public static final String AM_BLACKLISTING_ENABLED =
       YARN_PREFIX + "am.blacklisting.enabled";
