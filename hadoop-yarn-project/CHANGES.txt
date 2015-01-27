@@ -2,7 +2,11 @@ Hadoop YARN Change Log
 
 Criteo Release
 
-    YARN-2056. Disable preemption at Queue level (Eric Payne via jlowe)
+   YARN-2932. Add entry for "preemptable" status (enabled/disabled) to
+   scheduler web UI and queue initialize/refresh logging.
+   (Eric Payne via wangda)
+
+   YARN-2056. Disable preemption at Queue level (Eric Payne via jlowe)
 
    YARN-4024. YARN RM should avoid unnecessary resolving IP when NMs doing heartbeat.
    (Hong Zhiguo via wangda)
