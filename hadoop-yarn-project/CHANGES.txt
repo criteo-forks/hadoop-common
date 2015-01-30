@@ -2,6 +2,9 @@ Hadoop YARN Change Log
 
 Criteo Release
 
+   YARN-3099. Capacity Scheduler LeafQueue/ParentQueue should use ResourceUsage
+   to track used-resources-by-label.(Wangda Tan via jianhe)
+
    YARN-3092. Created a common ResourceUsage class to track labeled resource
    usages in Capacity Scheduler. (Wangda Tan via jianhe)
 
