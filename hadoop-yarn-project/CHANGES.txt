@@ -2,6 +2,8 @@ Hadoop YARN Change Log
 
 Criteo Release
 
+   YARN-3230. Clarify application states on the web UI. (Jian He via wangda)
+
    YARN-2943. Added node-labels page on RM web UI. (Wangda Tan via jianhe)
 
    YARN-2920. Changed CapacityScheduler to kill containers on nodes where
