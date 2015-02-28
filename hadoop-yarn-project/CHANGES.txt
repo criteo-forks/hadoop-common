@@ -2,6 +2,9 @@ Hadoop YARN Change Log
 
 Criteo Release
 
+   YARN-3262. Surface application outstanding resource requests table
+       in RM web UI. (Jian He via wangda)
+
    YARN-3230. Clarify application states on the web UI. (Jian He via wangda)
 
    YARN-2943. Added node-labels page on RM web UI. (Wangda Tan via jianhe)

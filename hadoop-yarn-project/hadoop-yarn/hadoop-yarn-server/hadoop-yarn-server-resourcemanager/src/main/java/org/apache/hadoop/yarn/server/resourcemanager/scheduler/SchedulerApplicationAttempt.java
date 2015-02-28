@@ -159,7 +159,11 @@ public class SchedulerApplicationAttempt {
   public synchronized Collection<RMContainer> getLiveContainers() {
     return new ArrayList<RMContainer>(liveContainers.values());
   }
-  
+
+  public AppSchedulingInfo getAppSchedulingInfo() {
+    return this.appSchedulingInfo;
+  }
+
   /**
    * Is this application pending?
    * @return true if it is else false.

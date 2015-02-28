@@ -583,4 +583,13 @@ public abstract class AbstractYarnScheduler
   protected void refreshMaximumAllocation(Resource newMaxAlloc) {
     nodeTracker.setConfiguredMaxAllocation(newMaxAlloc);
   }
+
+  public List<ResourceRequest> getPendingResourceRequestsForAttempt(
+      ApplicationAttemptId attemptId) {
+    SchedulerApplicationAttempt attempt = getApplicationAttempt(attemptId);
+    if (attempt != null) {
+      return attempt.getAppSchedulingInfo().getAllResourceRequests();
+    }
+    return null;
+  }
 }
