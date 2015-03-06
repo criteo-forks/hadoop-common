@@ -46,6 +46,9 @@ Criteo Release
    YARN-3251. Fixed a deadlock in CapacityScheduler when computing
    absoluteMaxAvailableCapacity in LeafQueue (Craig Welch via wangda)
 
+    YARN-3275. CapacityScheduler: Preemption happening on non-preemptable
+    queues (Eric Payne via jlowe)
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES

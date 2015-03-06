@@ -301,4 +301,9 @@ public class Resources {
     return createResource(Math.min(lhs.getMemory(), rhs.getMemory()),
         Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()));
   }
+  
+  public static Resource componentwiseMax(Resource lhs, Resource rhs) {
+    return createResource(Math.max(lhs.getMemory(), rhs.getMemory()),
+        Math.max(lhs.getVirtualCores(), rhs.getVirtualCores()));
+  }
 }

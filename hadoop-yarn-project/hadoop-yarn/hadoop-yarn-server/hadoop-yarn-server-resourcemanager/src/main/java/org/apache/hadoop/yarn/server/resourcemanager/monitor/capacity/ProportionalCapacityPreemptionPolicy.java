@@ -496,6 +496,17 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     List<RMContainer> skippedAMContainerlist = new ArrayList<RMContainer>();
 
     for (TempQueue qT : queues) {
+      if (qT.preemptionDisabled && qT.leafQueue != null) {
+        if (LOG.isDebugEnabled()) {
+          if (Resources.greaterThan(rc, clusterResource,
+              qT.toBePreempted, Resource.newInstance(0, 0))) {
+            LOG.debug("Tried to preempt the following "
+                      + "resources from non-preemptable queue: "
+                      + qT.queueName + " - Resources: " + qT.toBePreempted);
+          }
+        }
+        continue;
+      }
       // we act only if we are violating balance by more than
       // maxIgnoredOverCapacity
       if (Resources.greaterThan(rc, clusterResource, qT.current,
@@ -689,6 +700,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       float absUsed = root.getAbsoluteUsedCapacity();
       float absCap = root.getAbsoluteCapacity();
       float absMaxCap = root.getAbsoluteMaximumCapacity();
+      boolean preemptionDisabled = root.getPreemptionDisabled();
 
       Resource current = Resources.multiply(clusterResources, absUsed);
       Resource guaranteed = Resources.multiply(clusterResources, absCap);
@@ -702,8 +714,8 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
         LeafQueue l = (LeafQueue) root;
         Resource pending = l.getTotalResourcePending();
         ret = new TempQueue(queueName, current, pending, guaranteed,
-            maxCapacity);
-        if (root.getPreemptionDisabled()) {
+            maxCapacity, preemptionDisabled);
+        if (preemptionDisabled) {
           ret.untouchableExtra = extra;
         } else {
           ret.preemptableExtra = extra;
@@ -712,7 +724,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       } else {
         Resource pending = Resource.newInstance(0, 0);
         ret = new TempQueue(root.getQueueName(), current, pending, guaranteed,
-            maxCapacity);
+            maxCapacity, false);
         Resource childrensPreemptable = Resource.newInstance(0, 0);
         for (CSQueue c : root.getChildQueues()) {
           TempQueue subq = cloneQueues(c, clusterResources);
@@ -771,9 +783,10 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
 
     final ArrayList<TempQueue> children;
     LeafQueue leafQueue;
+    boolean preemptionDisabled;
 
     TempQueue(String queueName, Resource current, Resource pending,
-        Resource guaranteed, Resource maxCapacity) {
+        Resource guaranteed, Resource maxCapacity, boolean preemptionDisabled) {
       this.queueName = queueName;
       this.current = current;
       this.pending = pending;
@@ -786,6 +799,7 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
       this.children = new ArrayList<TempQueue>();
       this.untouchableExtra = Resource.newInstance(0, 0);
       this.preemptableExtra = Resource.newInstance(0, 0);
+      this.preemptionDisabled = preemptionDisabled;
     }
 
     public void setLeafQueue(LeafQueue l){
@@ -817,10 +831,13 @@ public class ProportionalCapacityPreemptionPolicy implements SchedulingEditPolic
     // the unused ones
     Resource offer(Resource avail, ResourceCalculator rc,
         Resource clusterResource) {
+      Resource absMaxCapIdealAssignedDelta = Resources.componentwiseMax(
+                      Resources.subtract(maxCapacity, idealAssigned),
+                      Resource.newInstance(0, 0));
       // remain = avail - min(avail, (max - assigned), (current + pending - assigned))
       Resource accepted = 
           Resources.min(rc, clusterResource, 
-              Resources.subtract(maxCapacity, idealAssigned),
+              absMaxCapIdealAssignedDelta,
           Resources.min(rc, clusterResource, avail, Resources.subtract(
               Resources.add(current, pending), idealAssigned)));
       Resource remain = Resources.subtract(avail, accepted);
