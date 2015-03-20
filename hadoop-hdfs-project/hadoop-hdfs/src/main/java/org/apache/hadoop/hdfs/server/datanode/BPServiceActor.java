@@ -260,14 +260,14 @@ class BPServiceActor implements Runnable {
 
     // Send incremental block reports to the Namenode outside the lock
     boolean success = false;
-    final long startTime = Time.monotonicNow();
+    final long startTime = monotonicNow();
     try {
       bpNamenode.blockReceivedAndDeleted(bpRegistration,
           bpos.getBlockPoolId(),
           reports.toArray(new StorageReceivedDeletedBlocks[reports.size()]));
       success = true;
     } finally {
-      dn.getMetrics().addIncrementalBlockReport(Time.monotonicNow()-startTime);
+      dn.getMetrics().addIncrementalBlockReport(monotonicNow() - startTime);
       if (!success) {
         synchronized (pendingIncrementalBRperStorage) {
           for (StorageReceivedDeletedBlocks report : reports) {
@@ -511,7 +511,7 @@ class BPServiceActor implements Runnable {
     }
     // send cache report if timer has expired.
     DatanodeCommand cmd = null;
-    final long startTime = Time.monotonicNow();
+    final long startTime = monotonicNow();
     if (startTime - lastCacheReport > dnConf.cacheReportInterval) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Sending cacheReport from service actor: " + this);
@@ -520,10 +520,10 @@ class BPServiceActor implements Runnable {
 
       String bpid = bpos.getBlockPoolId();
       List<Long> blockIds = dn.getFSDataset().getCacheReport(bpid);
-      long createTime = Time.monotonicNow();
+      long createTime = monotonicNow();
 
       cmd = bpNamenode.cacheReport(bpRegistration, bpid, blockIds);
-      long sendTime = Time.monotonicNow();
+      long sendTime = monotonicNow();
       long createCost = createTime - startTime;
       long sendCost = sendTime - createTime;
       dn.getMetrics().addCacheReport(sendCost);
@@ -635,7 +635,7 @@ class BPServiceActor implements Runnable {
     //
     while (shouldRun()) {
       try {
-        final long startTime = scheduler.monotonicNow();
+        final long startTime = monotonicNow();
 
         //
         // Every so often, send heartbeat or block-report
@@ -666,7 +666,7 @@ class BPServiceActor implements Runnable {
               }
               fullBlockReportLeaseId = resp.getFullBlockReportLeaseId();
             }
-            dn.getMetrics().addHeartbeat(scheduler.monotonicNow() - startTime);
+            dn.getMetrics().addHeartbeat(monotonicNow() - startTime);
 
             // If the state of this NN has changed (eg STANDBY->ACTIVE)
             // then let the BPOfferService update itself.

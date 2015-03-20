@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.util.Time.monotonicNow;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.net.InetAddresses;
@@ -44,7 +46,6 @@ import org.apache.hadoop.net.*;
 import org.apache.hadoop.net.NetworkTopology.InvalidTopologyException;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.util.Time;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -583,8 +584,8 @@ public class DatanodeManager {
 
   /** Is the datanode dead? */
   boolean isDatanodeDead(DatanodeDescriptor node) {
-    return (node.getLastUpdate() <
-            (Time.now() - heartbeatExpireInterval));
+    return (node.getLastUpdateMonotonic() <
+            (monotonicNow() - heartbeatExpireInterval));
   }
 
   /** Add a datanode. */
@@ -1353,7 +1354,7 @@ public class DatanodeManager {
                 .getAddress().getHostAddress(), addr.getHostName(), "",
                 addr.getPort() == 0 ? defaultXferPort : addr.getPort(),
                 defaultInfoPort, defaultInfoSecurePort, defaultIpcPort));
-        dn.setLastUpdate(0); // Consider this node dead for reporting
+        setDatanodeDead(dn);
         nodes.add(dn);
       }
     }
@@ -1386,6 +1387,7 @@ public class DatanodeManager {
   
   private void setDatanodeDead(DatanodeDescriptor node) {
     node.setLastUpdate(0);
+    node.setLastUpdateMonotonic(0);
   }
 
   /** Handle heartbeat from datanodes. */
@@ -1478,7 +1480,7 @@ public class DatanodeManager {
               blockPoolId, blks));
         }
         boolean sendingCachingCommands = false;
-        long nowMs = Time.monotonicNow();
+        long nowMs = monotonicNow();
         if (shouldSendCachingCommands && 
             ((nowMs - nodeinfo.getLastCachingDirectiveSentTimeMs()) >=
                 timeBetweenResendingCachingDirectivesMs)) {

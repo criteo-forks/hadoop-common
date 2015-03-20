@@ -700,7 +700,7 @@ public class Balancer {
      */
     @Override
     public int run(String[] args) {
-      final long startTime = Time.now();
+      final long startTime = Time.monotonicNow();
       final Configuration conf = getConf();
 
       try {
@@ -715,8 +715,10 @@ public class Balancer {
         System.out.println(e + ".  Exiting ...");
         return ExitStatus.INTERRUPTED.getExitCode();
       } finally {
-        System.out.format("%-24s ", DateFormat.getDateTimeInstance().format(new Date()));
-        System.out.println("Balancing took " + time2Str(Time.now()-startTime));
+        System.out.format("%-24s ",
+            DateFormat.getDateTimeInstance().format(new Date()));
+        System.out.println("Balancing took "
+            + time2Str(Time.monotonicNow() - startTime));
       }
     }
 

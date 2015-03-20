@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -310,7 +310,7 @@ public class FSImageFormat {
       StartupProgress prog = NameNode.getStartupProgress();
       Step step = new Step(StepType.INODES);
       prog.beginStep(Phase.LOADING_FSIMAGE, step);
-      long startTime = now();
+      long startTime = monotonicNow();
 
       //
       // Load in bits
@@ -440,8 +440,9 @@ public class FSImageFormat {
       imgDigest = new MD5Hash(digester.digest());
       loaded = true;
       
-      LOG.info("Image file " + curFile + " of size " + curFile.length() +
-          " bytes loaded in " + (now() - startTime)/1000 + " seconds.");
+      LOG.info("Image file " + curFile + " of size " + curFile.length()
+          + " bytes loaded in " + (monotonicNow() - startTime) / 1000
+          + " seconds.");
     }
 
   /** Update the root node's attributes */
@@ -1239,7 +1240,7 @@ public class FSImageFormat {
       prog.beginStep(Phase.SAVING_CHECKPOINT, step);
       prog.setTotal(Phase.SAVING_CHECKPOINT, step, numINodes);
       Counter counter = prog.getCounter(Phase.SAVING_CHECKPOINT, step);
-      long startTime = now();
+      long startTime = monotonicNow();
       //
       // Write out data
       //
@@ -1307,8 +1308,9 @@ public class FSImageFormat {
       // set md5 of the saved image
       savedDigest = new MD5Hash(digester.digest());
 
-      LOG.info("Image file " + newFile + " of size " + newFile.length() +
-          " bytes saved in " + (now() - startTime)/1000 + " seconds.");
+      LOG.info("Image file " + newFile + " of size " + newFile.length()
+          + " bytes saved in " + (monotonicNow() - startTime) / 1000
+          + " seconds.");
     }
 
     /**

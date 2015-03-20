@@ -303,7 +303,8 @@ public class BlockInfoUnderConstruction extends BlockInfo {
         continue;
       }
       final ReplicaUnderConstruction ruc = replicas.get(i);
-      final long lastUpdate = ruc.getExpectedStorageLocation().getDatanodeDescriptor().getLastUpdate(); 
+      final long lastUpdate = ruc.getExpectedStorageLocation()
+          .getDatanodeDescriptor().getLastUpdateMonotonic();
       if (lastUpdate > mostRecentLastUpdate) {
         primaryNodeIndex = i;
         primary = ruc;
