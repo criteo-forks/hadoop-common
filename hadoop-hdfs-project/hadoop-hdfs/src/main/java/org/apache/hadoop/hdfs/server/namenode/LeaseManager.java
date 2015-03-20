@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import static org.apache.hadoop.util.Time.monotonicNow;
-import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -261,17 +260,17 @@ public class LeaseManager {
     }
     /** Only LeaseManager object can renew a lease */
     private void renew() {
-      this.lastUpdate = now();
+      this.lastUpdate = monotonicNow();
     }
 
     /** @return true if the Hard Limit Timer has expired */
     public boolean expiredHardLimit() {
-      return now() - lastUpdate > hardLimit;
+      return monotonicNow() - lastUpdate > hardLimit;
     }
 
     /** @return true if the Soft Limit Timer has expired */
     public boolean expiredSoftLimit() {
-      return now() - lastUpdate > softLimit;
+      return monotonicNow() - lastUpdate > softLimit;
     }
 
     /** Does this lease contain any path? */

@@ -698,7 +698,7 @@ public class DFSOutputStream extends FSOutputSummer
      */
     @Override
     public void run() {
-      long lastPacket = Time.now();
+      long lastPacket = Time.monotonicNow();
       TraceScope scope = null;
       while (!streamerClosed && dfsClient.clientRunning) {
 
@@ -723,7 +723,7 @@ public class DFSOutputStream extends FSOutputSummer
 
           synchronized (dataQueue) {
             // wait for a packet to be sent.
-            long now = Time.now();
+            long now = Time.monotonicNow();
             while ((!streamerClosed && !hasError && dfsClient.clientRunning 
                 && dataQueue.size() == 0 && 
                 (stage != BlockConstructionStage.DATA_STREAMING || 
@@ -739,7 +739,7 @@ public class DFSOutputStream extends FSOutputSummer
                 DFSClient.LOG.warn("Caught exception ", e);
               }
               doSleep = false;
-              now = Time.now();
+              now = Time.monotonicNow();
             }
             if (streamerClosed || hasError || !dfsClient.clientRunning) {
               continue;
@@ -850,7 +850,7 @@ public class DFSOutputStream extends FSOutputSummer
           } finally {
             writeScope.close();
           }
-          lastPacket = Time.now();
+          lastPacket = Time.monotonicNow();
           
           // update bytesSent
           long tmpBytesSent = one.getLastByteOffsetBlock();
@@ -1098,8 +1098,8 @@ public class DFSOutputStream extends FSOutputSummer
               // the local node or the only one in the pipeline.
               if (PipelineAck.isRestartOOBStatus(reply) &&
                   shouldWaitForRestart(i)) {
-                restartDeadline = dfsClient.getConf().datanodeRestartTimeout +
-                    Time.now();
+                restartDeadline = dfsClient.getConf().datanodeRestartTimeout
+                    + Time.monotonicNow();
                 setRestartingNodeIndex(i);
                 String message = "A datanode is restarting: " + targets[i];
                 DFSClient.LOG.info(message);
@@ -1548,7 +1548,7 @@ public class DFSOutputStream extends FSOutputSummer
             errorIndex = -1;
           }
           // still within the deadline
-          if (Time.now() < restartDeadline) {
+          if (Time.monotonicNow() < restartDeadline) {
             continue; // with in the deadline
           }
           // expired. declare the restarting node dead
@@ -1599,14 +1599,12 @@ public class DFSOutputStream extends FSOutputSummer
         errorIndex = -1;
         success = false;
 
-        long startTime = Time.now();
         DatanodeInfo[] excluded =
             excludedNodes.getAllPresent(excludedNodes.asMap().keySet())
             .keySet()
             .toArray(new DatanodeInfo[0]);
         block = oldBlock;
-        lb = locateFollowingBlock(startTime,
-            excluded.length > 0 ? excluded : null);
+        lb = locateFollowingBlock(excluded.length > 0 ? excluded : null);
         block = lb.getBlock();
         block.setNumBytes(0);
         bytesSent = 0;
@@ -1760,7 +1758,7 @@ public class DFSOutputStream extends FSOutputSummer
           // Check whether there is a restart worth waiting for.
           if (checkRestart && shouldWaitForRestart(errorIndex)) {
             restartDeadline = dfsClient.getConf().datanodeRestartTimeout +
-                Time.now();
+                Time.monotonicNow();
             restartingNodeIndex = errorIndex;
             errorIndex = -1;
             DFSClient.LOG.info("Waiting for the datanode to be restarted: " +
@@ -1801,12 +1799,11 @@ public class DFSOutputStream extends FSOutputSummer
       }
     }
 
-    private LocatedBlock locateFollowingBlock(long start,
-        DatanodeInfo[] excludedNodes)  throws IOException {
+    private LocatedBlock locateFollowingBlock(DatanodeInfo[] excludedNodes)  throws IOException {
       int retries = dfsClient.getConf().nBlockWriteLocateFollowingRetry;
       long sleeptime = 400;
       while (true) {
-        long localstart = Time.now();
+        long localstart = Time.monotonicNow();
         while (true) {
           try {
             return dfsClient.namenode.addBlock(src, dfsClient.clientName,
@@ -1830,10 +1827,10 @@ public class DFSOutputStream extends FSOutputSummer
               } else {
                 --retries;
                 DFSClient.LOG.info("Exception while adding a block", e);
-                if (Time.now() - localstart > 5000) {
+                long elapsed = Time.monotonicNow() - localstart;
+                if (elapsed > 5000) {
                   DFSClient.LOG.info("Waiting for replication for "
-                      + (Time.now() - localstart) / 1000
-                      + " seconds");
+                      + (elapsed / 1000) + " seconds");
                 }
                 try {
                   DFSClient.LOG.warn("NotReplicatedYetException sleeping " + src
@@ -2682,7 +2679,7 @@ public class DFSOutputStream extends FSOutputSummer
   // should be called holding (this) lock since setTestFilename() may 
   // be called during unit tests
   private void completeFile(ExtendedBlock last) throws IOException {
-    long localstart = Time.now();
+    long localstart = Time.monotonicNow();
     long localTimeout = 400;
     boolean fileComplete = false;
     int retries = dfsClient.getConf().nBlockWriteLocateFollowingRetry;
@@ -2691,8 +2688,9 @@ public class DFSOutputStream extends FSOutputSummer
           dfsClient.namenode.complete(src, dfsClient.clientName, last, fileId);
       if (!fileComplete) {
         final int hdfsTimeout = dfsClient.getHdfsTimeout();
-        if (!dfsClient.clientRunning ||
-              (hdfsTimeout > 0 && localstart + hdfsTimeout < Time.now())) {
+        if (!dfsClient.clientRunning
+            || (hdfsTimeout > 0 
+                && localstart + hdfsTimeout < Time.monotonicNow())) {
             String msg = "Unable to close file because dfsclient " +
                           " was unable to contact the HDFS servers." +
                           " clientRunning " + dfsClient.clientRunning +
@@ -2708,7 +2706,7 @@ public class DFSOutputStream extends FSOutputSummer
           retries--;
           Thread.sleep(localTimeout);
           localTimeout *= 2;
-          if (Time.now() - localstart > 5000) {
+          if (Time.monotonicNow() - localstart > 5000) {
             DFSClient.LOG.info("Could not complete " + src + " retrying...");
           }
         } catch (InterruptedException ie) {
