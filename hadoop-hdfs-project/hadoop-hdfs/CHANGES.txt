@@ -5,6 +5,8 @@ Release 2.6.0 - 2014-11-18
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+    HDFS-7891. A block placement policy with best rack failure tolerance.
+    (Walter Su via szetszwo)
 
     HDFS-6584. Support archival storage.  (See breakdown of tasks below for
     features and contributors)
