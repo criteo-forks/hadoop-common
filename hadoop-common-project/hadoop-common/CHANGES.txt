@@ -6,6 +6,9 @@ Release 2.6.0 - 2014-11-18
 
   NEW FEATURES
 
+    HADOOP-11812. Implement listLocatedStatus for ViewFileSystem to speed up
+    split calculation (gera)
+
     HADOOP-9631. ViewFs should use underlying FileSystem's server side defaults.
     (Lohit Vijayarenu and Erik Krogen via zhz)
 
