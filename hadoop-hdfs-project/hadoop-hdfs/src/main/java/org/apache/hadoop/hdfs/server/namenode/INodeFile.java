@@ -475,11 +475,11 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public Quota.Counts cleanSubtree(final int snapshot, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       return sf.cleanFile(this, snapshot, priorSnapshotId, collectedBlocks,
-          removedINodes);
+          removedINodes, removedUCFiles);
     }
     Quota.Counts counts = Quota.Counts.newInstance();
     if (snapshot == CURRENT_STATE_ID) {
@@ -487,13 +487,16 @@ public class INodeFile extends INodeWithAdditionalFields
         // this only happens when deleting the current file and the file is not
         // in any snapshot
         computeQuotaUsage(counts, false);
-        destroyAndCollectBlocks(collectedBlocks, removedINodes);
+        destroyAndCollectBlocks(collectedBlocks, removedINodes, removedUCFiles);
       } else {
+        FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
         // when deleting the current file and the file is in snapshot, we should
         // clean the 0-sized block if the file is UC
-        FileUnderConstructionFeature uc = getFileUnderConstructionFeature();
         if (uc != null) {
           uc.cleanZeroSizeBlock(this, collectedBlocks);
+          if (removedUCFiles != null) {
+            removedUCFiles.add(getId());
+          }
         }
       }
     }
@@ -502,7 +505,7 @@ public class INodeFile extends INodeWithAdditionalFields
 
   @Override
   public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     if (blocks != null && collectedBlocks != null) {
       for (BlockInfo blk : blocks) {
         collectedBlocks.addDeleteBlock(blk);
@@ -516,6 +519,9 @@ public class INodeFile extends INodeWithAdditionalFields
     FileWithSnapshotFeature sf = getFileWithSnapshotFeature();
     if (sf != null) {
       sf.clearDiffs();
+    }
+    if (isUnderConstruction() && removedUCFiles != null) {
+      removedUCFiles.add(getId());
     }
   }
 

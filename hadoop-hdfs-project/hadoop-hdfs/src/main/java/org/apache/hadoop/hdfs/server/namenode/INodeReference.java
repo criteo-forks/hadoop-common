@@ -327,16 +327,19 @@ public abstract class INodeReference extends INode {
 
   @Override // used by WithCount
   public Quota.Counts cleanSubtree(int snapshot, int prior,
-      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
+      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes,
+      List<Long> removedUCFiles) {
     return referred.cleanSubtree(snapshot, prior, collectedBlocks,
-        removedINodes);
+        removedINodes, removedUCFiles);
   }
 
   @Override // used by WithCount
   public void destroyAndCollectBlocks(
-      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
+      BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes,
+      List<Long> removedUCFiles) {
     if (removeReference(this) <= 0) {
-      referred.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+      referred.destroyAndCollectBlocks(collectedBlocks, removedINodes,
+          removedUCFiles);
     }
   }
 
@@ -562,7 +565,7 @@ public abstract class INodeReference extends INode {
     @Override
     public Quota.Counts cleanSubtree(final int snapshot, int prior,
         final BlocksMapUpdateInfo collectedBlocks,
-        final List<INode> removedINodes) {
+        final List<INode> removedINodes, List<Long> removedUCFiles) {
       // since WithName node resides in deleted list acting as a snapshot copy,
       // the parameter snapshot must be non-null
       Preconditions.checkArgument(snapshot != Snapshot.CURRENT_STATE_ID);
@@ -578,7 +581,7 @@ public abstract class INodeReference extends INode {
       }
 
       Quota.Counts counts = getReferredINode().cleanSubtree(snapshot, prior,
-          collectedBlocks, removedINodes);
+          collectedBlocks, removedINodes, removedUCFiles);
       INodeReference ref = getReferredINode().getParentReference();
       if (ref != null) {
         try {
@@ -601,11 +604,11 @@ public abstract class INodeReference extends INode {
     
     @Override
     public void destroyAndCollectBlocks(BlocksMapUpdateInfo collectedBlocks,
-        final List<INode> removedINodes) {
+        final List<INode> removedINodes, List<Long> removedUCFiles) {
       int snapshot = getSelfSnapshot();
       if (removeReference(this) <= 0) {
         getReferredINode().destroyAndCollectBlocks(collectedBlocks,
-            removedINodes);
+            removedINodes, removedUCFiles);
       } else {
         int prior = getPriorSnapshot(this);
         INode referred = getReferredINode().asReference().getReferredINode();
@@ -625,7 +628,7 @@ public abstract class INodeReference extends INode {
           }
           try {
             Quota.Counts counts = referred.cleanSubtree(snapshot, prior,
-                collectedBlocks, removedINodes);
+                collectedBlocks, removedINodes, removedUCFiles);
             INodeReference ref = getReferredINode().getParentReference();
             if (ref != null) {
               ref.addSpaceConsumed(-counts.get(Quota.NAMESPACE),
@@ -681,12 +684,13 @@ public abstract class INodeReference extends INode {
     
     @Override
     public Quota.Counts cleanSubtree(int snapshot, int prior,
-        BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes) {
+        BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
+        List<Long> removedUCFiles) {
       if (snapshot == Snapshot.CURRENT_STATE_ID
           && prior == Snapshot.NO_SNAPSHOT_ID) {
         Quota.Counts counts = Quota.Counts.newInstance();
         this.computeQuotaUsage(counts, true);
-        destroyAndCollectBlocks(collectedBlocks, removedINodes);
+        destroyAndCollectBlocks(collectedBlocks, removedINodes, removedUCFiles);
         return counts;
       } else {
         // if prior is NO_SNAPSHOT_ID, we need to check snapshot belonging to 
@@ -703,7 +707,7 @@ public abstract class INodeReference extends INode {
           return Quota.Counts.newInstance();
         }
         return getReferredINode().cleanSubtree(snapshot, prior,
-            collectedBlocks, removedINodes);
+            collectedBlocks, removedINodes, removedUCFiles);
       }
     }
     
@@ -719,10 +723,11 @@ public abstract class INodeReference extends INode {
      */
     @Override
     public void destroyAndCollectBlocks(
-        BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes) {
+        BlocksMapUpdateInfo collectedBlocks, final List<INode> removedINodes,
+        List<Long> removedUCFiles) {
       if (removeReference(this) <= 0) {
         getReferredINode().destroyAndCollectBlocks(collectedBlocks,
-            removedINodes);
+            removedINodes, removedUCFiles);
       } else {
         // we will clean everything, including files, directories, and 
         // snapshots, that were created after this prior snapshot
@@ -745,7 +750,7 @@ public abstract class INodeReference extends INode {
           // compute quota usage updates before calling this destroy
           // function, we use true for countDiffChange
           referred.cleanSubtree(snapshot, prior, collectedBlocks,
-              removedINodes);
+              removedINodes, removedUCFiles);
         } else if (referred.isDirectory()) {
           // similarly, if referred is a directory, it must be an
           // INodeDirectory with snapshot
@@ -753,7 +758,7 @@ public abstract class INodeReference extends INode {
           Preconditions.checkState(dir.isWithSnapshot());
           try {
             DirectoryWithSnapshotFeature.destroyDstSubtree(dir, snapshot,
-                prior, collectedBlocks, removedINodes);
+                prior, collectedBlocks, removedINodes, removedUCFiles);
           } catch (QuotaExceededException e) {
             LOG.error("should not exceed quota while snapshot deletion", e);
           }

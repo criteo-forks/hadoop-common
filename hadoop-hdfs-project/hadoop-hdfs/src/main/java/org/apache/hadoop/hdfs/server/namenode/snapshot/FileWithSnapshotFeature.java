@@ -114,14 +114,15 @@ public class FileWithSnapshotFeature implements INode.Feature {
   
   public Quota.Counts cleanFile(final INodeFile file, final int snapshotId,
       int priorSnapshotId, final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, final List<Long> removedUCFiles) {
     if (snapshotId == Snapshot.CURRENT_STATE_ID) {
       // delete the current file while the file has snapshot feature
       if (!isCurrentFileDeleted()) {
         file.recordModification(priorSnapshotId);
         deleteCurrentFile();
       }
-      collectBlocksAndClear(file, collectedBlocks, removedINodes);
+      collectBlocksAndClear(file, collectedBlocks,
+          removedINodes, removedUCFiles);
       return Quota.Counts.newInstance();
     } else { // delete the snapshot
       priorSnapshotId = getDiffs().updatePrior(snapshotId, priorSnapshotId);
@@ -148,7 +149,7 @@ public class FileWithSnapshotFeature implements INode.Feature {
       }
     }
     
-    collectBlocksAndClear(file, collectedBlocks, removedINodes);
+    collectBlocksAndClear(file, collectedBlocks, removedINodes, null);
     
     long dsDelta = oldDiskspace - file.diskspaceConsumed();
     return Quota.Counts.newInstance(0, dsDelta);
@@ -159,10 +160,11 @@ public class FileWithSnapshotFeature implements INode.Feature {
    * any inode, collect them and update the block list.
    */
   private void collectBlocksAndClear(final INodeFile file,
-      final BlocksMapUpdateInfo info, final List<INode> removedINodes) {
+      final BlocksMapUpdateInfo info, final List<INode> removedINodes,
+      final List<Long> removedUCFiles) {
     // check if everything is deleted.
     if (isCurrentFileDeleted() && getDiffs().asList().isEmpty()) {
-      file.destroyAndCollectBlocks(info, removedINodes);
+      file.destroyAndCollectBlocks(info, removedINodes, removedUCFiles);
       return;
     }
     // find max file size.

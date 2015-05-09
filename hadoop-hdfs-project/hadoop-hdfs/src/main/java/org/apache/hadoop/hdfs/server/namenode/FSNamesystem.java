@@ -94,7 +94,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_STORAGE_POLICY_ENABLED_DE
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_SUPPORT_APPEND_KEY;
 import static org.apache.hadoop.hdfs.server.common.HdfsServerConstants.SECURITY_XATTR_UNREADABLE_BY_SUPERUSER;
-import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.util.Time.now;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
@@ -2860,11 +2859,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       } else {
         if (overwrite) {
           toRemoveBlocks = new BlocksMapUpdateInfo();
-          List<INode> toRemoveINodes = new ChunkedArrayList<INode>();
-          long ret = dir.delete(src, toRemoveBlocks, toRemoveINodes, now());
+          List<INode> toRemoveINodes = new ChunkedArrayList<>();
+          List<Long> toRemoveUCFiles = new ChunkedArrayList<>();
+          long ret = dir.delete(src, toRemoveBlocks, toRemoveINodes,
+              toRemoveUCFiles, now());
           if (ret >= 0) {
             incrDeletedFileCount(ret);
-            removePathAndBlocks(src, null, toRemoveINodes, true);
+            removePathAndBlocks(src, null, toRemoveUCFiles, toRemoveINodes,
+                true);
           }
         } else {
           // If lease soft limit time is expired, recover the lease
@@ -2889,7 +2891,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         throw new IOException("Unable to add " + src +  " to namespace");
       }
       leaseManager.addLease(newNode.getFileUnderConstructionFeature()
-          .getClientName(), src);
+          .getClientName(), newNode.getId());
 
       // Set encryption attributes if necessary
       if (feInfo != null) {
@@ -3037,7 +3039,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final INodeFile cons = file.toUnderConstruction(leaseHolder, clientMachine);
 
     leaseManager.addLease(cons.getFileUnderConstructionFeature()
-        .getClientName(), src);
+        .getClientName(), file.getId());
     
     LocatedBlock ret = blockManager.convertLastBlockToUnderConstruction(cons);
     if (ret != null && dsDelta != 0) {
@@ -3158,7 +3160,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       //
 
       if (!force && lease != null) {
-        Lease leaseFile = leaseManager.getLeaseByPath(src);
+        Lease leaseFile = leaseManager.getLease(fileInode);
         if (leaseFile != null && leaseFile.equals(lease)) {
           throw new AlreadyBeingCreatedException(
             "failed to create file " + src + " for " + holder +
@@ -3817,7 +3819,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * Save allocated block at the given pending filename
    * 
    * @param src path to the file
-   * @param inodesInPath representing each of the components of src.
+   * @param inodes representing each of the components of src.
    *                     The last INode is the INode for {@code src} file.
    * @param newBlock newly allocated block to be save
    * @param targets target datanodes where replicas of the new block is placed
@@ -4121,6 +4123,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
              IOException {
     BlocksMapUpdateInfo collectedBlocks = new BlocksMapUpdateInfo();
     List<INode> removedINodes = new ChunkedArrayList<INode>();
+    List<Long> removedUCFiles = new ChunkedArrayList<>();
     FSPermissionChecker pc = getPermissionChecker();
     byte[][] pathComponents = FSDirectory.getPathComponentsForReservedPath(src);
     boolean ret = false;
@@ -4142,14 +4145,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       long mtime = now();
       // Unlink the target directory from directory tree
       long filesRemoved = dir.delete(src, collectedBlocks, removedINodes,
-              mtime);
+          removedUCFiles, mtime);
       if (filesRemoved < 0) {
         return false;
       }
       getEditLog().logDelete(src, mtime, logRetryCache);
       incrDeletedFileCount(filesRemoved);
       // Blocks/INodes will be handled later
-      removePathAndBlocks(src, null, removedINodes, true);
+      removePathAndBlocks(src, null, removedUCFiles, removedINodes, true);
       ret = true;
     } finally {
       writeUnlock();
@@ -4197,9 +4200,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @param acquireINodeMapLock Whether to acquire the lock for inode removal
    */
   void removePathAndBlocks(String src, BlocksMapUpdateInfo blocks,
-      List<INode> removedINodes, final boolean acquireINodeMapLock) {
+      List<Long> removedUCFiles, List<INode> removedINodes,
+      final boolean acquireINodeMapLock) {
     assert hasWriteLock();
-    leaseManager.removeLeaseWithPrefixPath(src);
+    leaseManager.removeLeases(removedUCFiles);
     // remove inodes from inodesMap
     if (removedINodes != null) {
       if (acquireINodeMapLock) {
@@ -4779,14 +4783,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       return lease;
     // The following transaction is not synced. Make sure it's sync'ed later.
     logReassignLease(lease.getHolder(), src, newHolder);
-    return reassignLeaseInternal(lease, src, newHolder, pendingFile);
+    return reassignLeaseInternal(lease, newHolder, pendingFile);
   }
   
-  Lease reassignLeaseInternal(Lease lease, String src, String newHolder,
-      INodeFile pendingFile) {
+  Lease reassignLeaseInternal(Lease lease, String newHolder, INodeFile pendingFile) {
     assert hasWriteLock();
     pendingFile.getFileUnderConstructionFeature().setClientName(newHolder);
-    return leaseManager.reassignLease(lease, src, newHolder);
+    return leaseManager.reassignLease(lease, pendingFile, newHolder);
   }
 
   private void commitOrCompleteLastBlock(final INodeFile fileINode,
@@ -4827,7 +4830,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     // since we just remove the uc feature from pendingFile
     final INodeFile newFile = pendingFile.toCompleteFile(now());
 
-    leaseManager.removeLease(uc.getClientName(), src);
+    leaseManager.removeLease(uc.getClientName(), pendingFile);
 
     waitForLoadingFSImage();
     // close file and persist block allocations for this file
@@ -7306,58 +7309,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
     String src = pendingFile.getFullPathName();
     persistBlocks(src, pendingFile, logRetryCache);
-  }
-
-  // rename was successful. If any part of the renamed subtree had
-  // files that were being written to, update with new filename.
-  void unprotectedChangeLease(String src, String dst) {
-    assert hasWriteLock();
-    leaseManager.changeLease(src, dst);
-  }
-
-  /**
-   * Serializes leases.
-   */
-  void saveFilesUnderConstruction(DataOutputStream out,
-      Map<Long, INodeFile> snapshotUCMap) throws IOException {
-    // This is run by an inferior thread of saveNamespace, which holds a read
-    // lock on our behalf. If we took the read lock here, we could block
-    // for fairness if a writer is waiting on the lock.
-    synchronized (leaseManager) {
-      Map<String, INodeFile> nodes = leaseManager.getINodesUnderConstruction();
-      for (Map.Entry<String, INodeFile> entry : nodes.entrySet()) {
-        // TODO: for HDFS-5428, because of rename operations, some
-        // under-construction files that are
-        // in the current fs directory can also be captured in the
-        // snapshotUCMap. We should remove them from the snapshotUCMap.
-        snapshotUCMap.remove(entry.getValue().getId());
-      }
-
-      out.writeInt(nodes.size() + snapshotUCMap.size()); // write the size
-      for (Map.Entry<String, INodeFile> entry : nodes.entrySet()) {
-        FSImageSerialization.writeINodeUnderConstruction(
-            out, entry.getValue(), entry.getKey());
-      }
-      for (Map.Entry<Long, INodeFile> entry : snapshotUCMap.entrySet()) {
-        // for those snapshot INodeFileUC, we use "/.reserved/.inodes/<inodeid>"
-        // as their paths
-        StringBuilder b = new StringBuilder();
-        b.append(FSDirectory.DOT_RESERVED_PATH_PREFIX)
-            .append(Path.SEPARATOR).append(FSDirectory.DOT_INODES_STRING)
-            .append(Path.SEPARATOR).append(entry.getValue().getId());
-        FSImageSerialization.writeINodeUnderConstruction(
-            out, entry.getValue(), b.toString());
-      }
-    }
-  }
-
-  /**
-   * @return all the under-construction files in the lease map
-   */
-  Map<String, INodeFile> getFilesUnderConstruction() {
-    synchronized (leaseManager) {
-      return leaseManager.getINodesUnderConstruction();
-    }
   }
 
   /**

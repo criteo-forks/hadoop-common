@@ -469,28 +469,32 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
    * @param removedINodes
    *          INodes collected from the descents for further cleaning up of
    *          inodeMap
+   * @param removedUCFiles
+   *          INodes whose leases need to be released
    * @return quota usage delta when deleting a snapshot
    */
   public abstract Quota.Counts cleanSubtree(final int snapshotId,
       int priorSnapshotId, BlocksMapUpdateInfo collectedBlocks,
-      List<INode> removedINodes);
-
+      List<INode> removedINodes, List<Long> removedUCFiles);
+  
   /**
    * Destroy self and clear everything! If the INode is a file, this method
    * collects its blocks for further block deletion. If the INode is a
    * directory, the method goes down the subtree and collects blocks from the
    * descents, and clears its parent/children references as well. The method
    * also clears the diff list if the INode contains snapshot diff list.
-   *
    * @param collectedBlocks
    *          blocks collected from the descents for further block
    *          deletion/update will be added to this map.
    * @param removedINodes
    *          INodes collected from the descents for further cleaning up of
    *          inodeMap
+   * @param removedUCFiles
+   *          INodes whose leases need to be released
    */
   public abstract void destroyAndCollectBlocks(
-      BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes);
+      BlocksMapUpdateInfo collectedBlocks, List<INode> removedINodes,
+      List<Long> removedUCFiles);
 
   /** Compute {@link ContentSummary}. Blocking call */
   public final ContentSummary computeContentSummary() {

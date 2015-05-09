@@ -344,7 +344,12 @@ public class INodesInPath {
   byte[] getLastLocalName() {
     return path[path.length - 1];
   }
-  
+
+  /** @return the full path in string form */
+  public String getPath() {
+    return DFSUtil.byteArray2PathString(path);
+  }
+
   /**
    * @return index of the {@link Snapshot.Root} node in the inodes array,
    * -1 for non-snapshot paths.
