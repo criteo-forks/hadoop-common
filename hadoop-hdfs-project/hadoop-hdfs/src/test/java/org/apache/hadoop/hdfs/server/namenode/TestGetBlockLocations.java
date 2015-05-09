@@ -69,7 +69,7 @@ public class TestGetBlockLocations {
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
         fsd.delete(FILE_PATH, new INode.BlocksMapUpdateInfo(),
-            new ArrayList<INode>(), now());
+            new ArrayList<INode>(), new ArrayList<Long>(), now());
         invocation.callRealMethod();
         return null;
       }

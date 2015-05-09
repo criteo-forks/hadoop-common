@@ -737,7 +737,8 @@ public class INodeDirectory extends INodeWithAdditionalFields
   /** Call cleanSubtree(..) recursively down the subtree. */
   public Quota.Counts cleanSubtreeRecursively(final int snapshot,
       int prior, final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes, final Map<INode, INode> excludedNodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles,
+      final Map<INode, INode> excludedNodes) {
     Quota.Counts counts = Quota.Counts.newInstance();
     // in case of deletion snapshot, since this call happens after we modify
     // the diff list, the snapshot to be deleted has been combined or renamed
@@ -752,7 +753,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
         continue;
       } else {
         Quota.Counts childCounts = child.cleanSubtree(snapshot, prior,
-            collectedBlocks, removedINodes);
+            collectedBlocks, removedINodes, removedUCFiles);
         counts.add(childCounts);
       }
     }
@@ -761,13 +762,14 @@ public class INodeDirectory extends INodeWithAdditionalFields
 
   @Override
   public void destroyAndCollectBlocks(final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     final DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     if (sf != null) {
-      sf.clear(this, collectedBlocks, removedINodes);
+      sf.clear(this, collectedBlocks, removedINodes, removedUCFiles);
     }
     for (INode child : getChildrenList(Snapshot.CURRENT_STATE_ID)) {
-      child.destroyAndCollectBlocks(collectedBlocks, removedINodes);
+      child.destroyAndCollectBlocks(collectedBlocks, removedINodes,
+          removedUCFiles);
     }
     clear();
     removedINodes.add(this);
@@ -776,12 +778,12 @@ public class INodeDirectory extends INodeWithAdditionalFields
   @Override
   public Quota.Counts cleanSubtree(final int snapshotId, int priorSnapshotId,
       final BlocksMapUpdateInfo collectedBlocks,
-      final List<INode> removedINodes) {
+      final List<INode> removedINodes, List<Long> removedUCFiles) {
     DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
     // there is snapshot data
     if (sf != null) {
       return sf.cleanDirectory(this, snapshotId, priorSnapshotId,
-          collectedBlocks, removedINodes);
+          collectedBlocks, removedINodes, removedUCFiles);
     }
     // there is no snapshot data
     if (priorSnapshotId == Snapshot.NO_SNAPSHOT_ID
@@ -789,13 +791,13 @@ public class INodeDirectory extends INodeWithAdditionalFields
       // destroy the whole subtree and collect blocks that should be deleted
       Quota.Counts counts = Quota.Counts.newInstance();
       this.computeQuotaUsage(counts, true);
-      destroyAndCollectBlocks(collectedBlocks, removedINodes);
+      destroyAndCollectBlocks(collectedBlocks, removedINodes, removedUCFiles);
       return counts;
     } else {
       // process recursively down the subtree
       Quota.Counts counts = cleanSubtreeRecursively(snapshotId, priorSnapshotId,
-          collectedBlocks, removedINodes, null);
-      if (isQuotaSet()) {
+          collectedBlocks, removedINodes, removedUCFiles, null);
+     if (isQuotaSet()) {
         getDirectoryWithQuotaFeature().addSpaceConsumed2Cache(
             -counts.get(Quota.NAMESPACE), -counts.get(Quota.DISKSPACE));
       }

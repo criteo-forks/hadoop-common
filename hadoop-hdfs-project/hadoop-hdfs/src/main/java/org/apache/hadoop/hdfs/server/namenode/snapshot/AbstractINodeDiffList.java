@@ -64,7 +64,7 @@ abstract class AbstractINodeDiffList<N extends INode,
    * @param snapshot The id of the snapshot to be deleted
    * @param prior The id of the snapshot taken before the to-be-deleted snapshot
    * @param collectedBlocks Used to collect information for blocksMap update
-   * @return delta in namespace. 
+   * @return delta in namespace.
    */
   public final Quota.Counts deleteSnapshotDiff(final int snapshot,
       final int prior, final N currentINode,
