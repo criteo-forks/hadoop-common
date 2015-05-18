@@ -139,6 +139,11 @@ public class LeaseManager {
   @VisibleForTesting
   public synchronized int countLease() {return sortedLeases.size();}
 
+  /** @return the number of paths contained in all leases */
+  synchronized long countPath() {
+    return leasesById.size();
+  }
+
   /**
    * Adds (or re-adds) the lease for the specified file.
    */
