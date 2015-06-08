@@ -2,6 +2,8 @@ Hadoop Change Log
 
 Criteo Release
 
+  HADOOP-12054 RPC client should not retry for InvalidToken exceptions
+
   HADOOP-11628. SPNEGO auth does not work with CNAMEs in JDK8.
   (Daryn Sharp via stevel).
 
