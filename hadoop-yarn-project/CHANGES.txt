@@ -6,6 +6,9 @@ Release 2.6.0 - 2014-11-18
 
   NEW FEATURES
 
+    YARN-3809. Failed to launch new attempts because
+    ApplicationMasterLauncher's threads all hang (Jun Gong via jlowe)
+
     YARN-3585. NodeManager cannot exit on SHUTDOWN event triggered and NM
     recovery is enabled (Rohith Sharmaks via jlowe)
 
