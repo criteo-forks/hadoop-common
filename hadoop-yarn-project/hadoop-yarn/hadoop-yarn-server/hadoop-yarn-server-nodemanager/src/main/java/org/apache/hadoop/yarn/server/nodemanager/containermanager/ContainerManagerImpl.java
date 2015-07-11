@@ -94,6 +94,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Containe
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.AuxiliaryLocalPathHandler;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedAppsEvent;
 import org.apache.hadoop.yarn.server.nodemanager.CMgrCompletedContainersEvent;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
@@ -277,6 +278,11 @@ public class ContainerManagerImpl extends CompositeService implements
 
       for (RecoveredContainerState rcs : stateStore.loadContainersState()) {
         recoverContainer(rcs);
+      }
+
+      // Recovery AMRMProxy state after apps and containers are recovered
+      if (this.amrmProxyEnabled) {
+        this.getAMRMProxyService().recover();
       }
 
       String diagnostic = "Application marked finished during recovery";
@@ -736,6 +742,14 @@ public class ContainerManagerImpl extends CompositeService implements
         containerId = containerTokenIdentifier.getContainerID();
         startContainerInternal(nmTokenIdentifier, containerTokenIdentifier,
           request);
+
+        // Initialize the AMRMProxy service instance only if the container is of
+        // type AM and if the AMRMProxy service is enabled
+        if (amrmProxyEnabled && containerTokenIdentifier.getContainerType()
+                .equals(ContainerType.APPLICATION_MASTER)) {
+          this.getAMRMProxyService().processApplicationStartRequest(request);
+        }
+
         succeededContainers.add(containerId);
       } catch (YarnException e) {
         failedContainers.put(containerId, SerializedException.newInstance(e));

@@ -270,4 +270,5 @@ public class ProtoUtils {
   public static Resource convertFromProtoFormat(ResourceProto resource) {
     return new ResourcePBImpl(resource);
   }
+
 }

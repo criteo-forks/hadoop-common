@@ -38,6 +38,8 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.security.ContainerTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.ContainerType;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.MockAM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockNM;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -280,10 +282,11 @@ public class TestContainerAllocation {
         public Token createContainerToken(ContainerId containerId,
             NodeId nodeId, String appSubmitter, Resource capability,
             Priority priority, long createTime,
-            LogAggregationContext logAggregationContext) {
+            LogAggregationContext logAggregationContext, ContainerType containerType) {
           numRetries++;
           return super.createContainerToken(containerId, nodeId, appSubmitter,
-            capability, priority, createTime, logAggregationContext);
+              capability, priority, createTime, logAggregationContext,
+                  containerType);
         }
       };
     }
@@ -320,12 +323,12 @@ public class TestContainerAllocation {
     SecurityUtilTestHelper.setTokenServiceUseIp(false);
     MockRM.launchAndRegisterAM(app1, rm1, nm1);
   }
-  
+
   private Configuration getConfigurationWithDefaultQueueLabels(
       Configuration config) {
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     final String B = CapacitySchedulerConfiguration.ROOT + ".b";
-    
+
     CapacitySchedulerConfiguration conf =
         (CapacitySchedulerConfiguration) getConfigurationWithQueueLabels(config);
         new CapacitySchedulerConfiguration(config);
@@ -333,11 +336,11 @@ public class TestContainerAllocation {
     conf.setDefaultNodeLabelExpression(B, "y");
     return conf;
   }
-  
+
   private Configuration getConfigurationWithQueueLabels(Configuration config) {
     CapacitySchedulerConfiguration conf =
         new CapacitySchedulerConfiguration(config);
-    
+
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
     conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
@@ -348,24 +351,24 @@ public class TestContainerAllocation {
     conf.setMaximumCapacity(A, 15);
     conf.setAccessibleNodeLabels(A, toSet("x"));
     conf.setCapacityByLabel(A, "x", 100);
-    
+
     final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 20);
     conf.setAccessibleNodeLabels(B, toSet("y"));
     conf.setCapacityByLabel(B, "y", 100);
-    
+
     final String C = CapacitySchedulerConfiguration.ROOT + ".c";
     conf.setCapacity(C, 70);
     conf.setMaximumCapacity(C, 70);
     conf.setAccessibleNodeLabels(C, RMNodeLabelsManager.EMPTY_STRING_SET);
-    
+
     // Define 2nd-level queues
     final String A1 = A + ".a1";
     conf.setQueues(A, new String[] {"a1"});
     conf.setCapacity(A1, 100);
     conf.setMaximumCapacity(A1, 100);
     conf.setCapacityByLabel(A1, "x", 100);
-    
+
     final String B1 = B + ".b1";
     conf.setQueues(B, new String[] {"b1"});
     conf.setCapacity(B1, 100);
@@ -376,10 +379,10 @@ public class TestContainerAllocation {
     conf.setQueues(C, new String[] {"c1"});
     conf.setCapacity(C1, 100);
     conf.setMaximumCapacity(C1, 100);
-    
+
     return conf;
   }
-  
+
   private void checkTaskContainersHost(ApplicationAttemptId attemptId,
       ContainerId containerId, ResourceManager rm, String host) {
     YarnScheduler scheduler = rm.getRMContext().getScheduler();
@@ -392,17 +395,17 @@ public class TestContainerAllocation {
       }
     }
   }
-  
+
   private <E> Set<E> toSet(E... elements) {
     Set<E> set = Sets.newHashSet(elements);
     return set;
   }
-  
+
   private Configuration getComplexConfigurationWithQueueLabels(
       Configuration config) {
     CapacitySchedulerConfiguration conf =
         new CapacitySchedulerConfiguration(config);
-    
+
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b"});
     conf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
@@ -415,14 +418,14 @@ public class TestContainerAllocation {
     conf.setAccessibleNodeLabels(A, toSet("x", "y"));
     conf.setCapacityByLabel(A, "x", 100);
     conf.setCapacityByLabel(A, "y", 50);
-    
+
     final String B = CapacitySchedulerConfiguration.ROOT + ".b";
     conf.setCapacity(B, 90);
     conf.setMaximumCapacity(B, 100);
     conf.setAccessibleNodeLabels(B, toSet("y", "z"));
     conf.setCapacityByLabel(B, "y", 50);
     conf.setCapacityByLabel(B, "z", 100);
-    
+
     // Define 2nd-level queues
     final String A1 = A + ".a1";
     conf.setQueues(A, new String[] {"a1"});
@@ -432,7 +435,7 @@ public class TestContainerAllocation {
     conf.setDefaultNodeLabelExpression(A1, "x");
     conf.setCapacityByLabel(A1, "x", 100);
     conf.setCapacityByLabel(A1, "y", 100);
-    
+
     conf.setQueues(B, new String[] {"b1", "b2"});
     final String B1 = B + ".b1";
     conf.setCapacity(B1, 50);
@@ -448,7 +451,7 @@ public class TestContainerAllocation {
 
     return conf;
   }
-  
+
   @Test(timeout = 300000)
   public void testContainerAllocationWithSingleUserLimits() throws Exception {
     final RMNodeLabelsManager mgr = new NullRMNodeLabelsManager();
@@ -477,7 +480,7 @@ public class TestContainerAllocation {
     // be allocated in h1
     RMApp app1 = rm1.submitApp(200, "app", "user", null, "a1");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
-    
+
     // A has only 10% of x, so it can only allocate one container in label=empty
     ContainerId containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
@@ -502,7 +505,7 @@ public class TestContainerAllocation {
     }
     rm1.close();
   }
-  
+
   @Test(timeout = 300000)
   public void testContainerAllocateWithComplexLabels() throws Exception {
     /*
@@ -515,25 +518,25 @@ public class TestContainerAllocation {
      *              /                   /              \
      *             a1 (x,y)         b1(no)              b2(y,z)
      *               100%                          y = 100%, z = 100%
-     *                           
+     *
      * Node structure:
      * h1 : x
      * h2 : x, y
      * h3 : y
      * h4 : y, z
      * h5 : NO
-     * 
+     *
      * Total resource:
      * x: 4G
      * y: 6G
      * z: 2G
      * *: 2G
-     * 
+     *
      * Resource of
      * a1: x=4G, y=3G, NO=0.2G
      * b1: NO=0.9G (max=1G)
      * b2: y=3, z=2G, NO=0.9G (max=1G)
-     * 
+     *
      * Each node can only allocate two containers
      */
 
@@ -560,7 +563,7 @@ public class TestContainerAllocation {
     MockNM nm3 = rm1.registerNode("h3:1234", 2048);
     MockNM nm4 = rm1.registerNode("h4:1234", 2048);
     MockNM nm5 = rm1.registerNode("h5:1234", 2048);
-    
+
     ContainerId containerId;
 
     // launch an app to queue a1 (label = x), and check all container will
@@ -568,7 +571,7 @@ public class TestContainerAllocation {
     RMApp app1 = rm1.submitApp(1024, "app", "user", null, "a1");
     MockAM am1 = MockRM.launchAndRegisterAM(app1, rm1, nm1);
 
-    // request a container (label = x && y). can only allocate on nm2 
+    // request a container (label = x && y). can only allocate on nm2
     am1.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "x && y");
     containerId =
         ContainerId.newContainerId(am1.getApplicationAttemptId(), 2);
@@ -593,7 +596,7 @@ public class TestContainerAllocation {
         RMContainerState.ALLOCATED, 10 * 1000));
     Assert.assertFalse(rm1.waitForState(nm5, containerId,
         RMContainerState.ALLOCATED, 10 * 1000));
-    
+
     // launch an app to queue b2
     RMApp app3 = rm1.submitApp(1024, "app", "user", null, "b2");
     MockAM am3 = MockRM.launchAndRegisterAM(app3, rm1, nm5);
@@ -608,7 +611,7 @@ public class TestContainerAllocation {
         RMContainerState.ALLOCATED, 10 * 1000));
     checkTaskContainersHost(am3.getApplicationAttemptId(), containerId, rm1,
         "h3");
-    
+
     // try to allocate container (request label = y && z) on nm3 (label = y) and
     // nm4 (label = y,z). Will sucessfully allocate on nm4 only.
     am3.allocate("*", 1024, 1, new ArrayList<ContainerId>(), "y && z");
@@ -643,7 +646,7 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 8000); // label = x
     MockNM nm2 = rm1.registerNode("h2:1234", 8000); // label = y
     MockNM nm3 = rm1.registerNode("h3:1234", 8000); // label = <empty>
-    
+
     ContainerId containerId;
 
     // launch an app to queue a1 (label = x), and check all container will
@@ -676,7 +679,7 @@ public class TestContainerAllocation {
         RMContainerState.ALLOCATED, 10 * 1000));
     checkTaskContainersHost(am2.getApplicationAttemptId(), containerId, rm1,
         "h2");
-    
+
     // launch an app to queue c1 (label = ""), and check all container will
     // be allocated in h3
     RMApp app3 = rm1.submitApp(200, "app", "user", null, "c1");
@@ -694,7 +697,7 @@ public class TestContainerAllocation {
 
     rm1.close();
   }
-  
+
   @Test (timeout = 120000)
   public void testContainerAllocateWithDefaultQueueLabels() throws Exception {
     // This test is pretty much similar to testContainerAllocateWithLabel.
@@ -719,7 +722,7 @@ public class TestContainerAllocation {
     MockNM nm1 = rm1.registerNode("h1:1234", 8000); // label = x
     MockNM nm2 = rm1.registerNode("h2:1234", 8000); // label = y
     MockNM nm3 = rm1.registerNode("h3:1234", 8000); // label = <empty>
-    
+
     ContainerId containerId;
 
     // launch an app to queue a1 (label = x), and check all container will
@@ -752,7 +755,7 @@ public class TestContainerAllocation {
         RMContainerState.ALLOCATED, 10 * 1000));
     checkTaskContainersHost(am2.getApplicationAttemptId(), containerId, rm1,
         "h2");
-    
+
     // launch an app to queue c1 (label = ""), and check all container will
     // be allocated in h3
     RMApp app3 = rm1.submitApp(200, "app", "user", null, "c1");

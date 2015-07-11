@@ -62,18 +62,19 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
   private Priority priority;
   private long creationTime;
   private LogAggregationContext logAggregationContext;
+  private ContainerType containerType;
 
   public ContainerTokenIdentifier(ContainerId containerID,
       String hostName, String appSubmitter, Resource r, long expiryTimeStamp,
       int masterKeyId, long rmIdentifier, Priority priority, long creationTime) {
     this(containerID, hostName, appSubmitter, r, expiryTimeStamp, masterKeyId,
-        rmIdentifier, priority, creationTime, null);
+        rmIdentifier, priority, creationTime, null, ContainerType.TASK);
   }
 
   public ContainerTokenIdentifier(ContainerId containerID, String hostName,
       String appSubmitter, Resource r, long expiryTimeStamp, int masterKeyId,
       long rmIdentifier, Priority priority, long creationTime,
-      LogAggregationContext logAggregationContext) {
+      LogAggregationContext logAggregationContext, ContainerType containerType) {
     this.containerId = containerID;
     this.nmHostAddr = hostName;
     this.appSubmitter = appSubmitter;
@@ -84,6 +85,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     this.priority = priority;
     this.creationTime = creationTime;
     this.logAggregationContext = logAggregationContext;
+    this.containerType = containerType;
   }
 
   /**
@@ -135,6 +137,14 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     return this.logAggregationContext;
   }
 
+  /**
+   * Get the ContainerType of container to allocate
+   * @return ContainerType
+   */
+  public ContainerType getContainerType(){
+    return this.containerType;
+  }
+
   @Override
   public void write(DataOutput out) throws IOException {
     LOG.debug("Writing ContainerTokenIdentifier to RPC layer: " + this);
@@ -154,6 +164,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     out.writeLong(this.rmIdentifier);
     out.writeInt(this.priority.getPriority());
     out.writeLong(this.creationTime);
+    out.writeUTF(this.containerType.name());
   }
 
   @Override
@@ -174,6 +185,7 @@ public class ContainerTokenIdentifier extends TokenIdentifier {
     this.rmIdentifier = in.readLong();
     this.priority = Priority.newInstance(in.readInt());
     this.creationTime = in.readLong();
+    this.containerType = ContainerType.valueOf(in.readUTF());
   }
 
   @Override

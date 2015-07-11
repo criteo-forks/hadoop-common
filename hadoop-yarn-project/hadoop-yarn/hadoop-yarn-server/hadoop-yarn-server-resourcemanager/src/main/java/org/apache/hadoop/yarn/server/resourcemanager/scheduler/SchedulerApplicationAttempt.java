@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.server.api.ContainerType;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AggregateAppResourceUsage;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -59,6 +60,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerStat
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeCleanContainerEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
@@ -81,7 +84,7 @@ public class SchedulerApplicationAttempt {
   private long lastVcoreSeconds = 0;
 
   protected final AppSchedulingInfo appSchedulingInfo;
-  
+
   protected Map<ContainerId, RMContainer> liveContainers =
       new HashMap<ContainerId, RMContainer>();
   protected final Map<Priority, Map<NodeId, RMContainer>> reservedContainers = 
@@ -96,7 +99,7 @@ public class SchedulerApplicationAttempt {
   private boolean unmanagedAM = true;
   private boolean amRunning = false;
   private LogAggregationContext logAggregationContext;
-  
+
   private AtomicLong firstAllocationRequestSentTime = new AtomicLong(0);
   private AtomicLong firstContainerAllocatedTime = new AtomicLong(0);
 
@@ -118,7 +121,7 @@ public class SchedulerApplicationAttempt {
    * is reset to 0.
    */
   Multiset<Priority> schedulingOpportunities = HashMultiset.create();
-  
+
   // Time of the last container scheduled at the current allowed level
   protected Map<Priority, Long> lastScheduledContainer =
       new HashMap<Priority, Long>();
@@ -163,7 +166,7 @@ public class SchedulerApplicationAttempt {
   public AppSchedulingInfo getAppSchedulingInfo() {
     return this.appSchedulingInfo;
   }
-  
+
   /**
    * Is this application pending?
    * @return true if it is else false.
@@ -316,7 +319,7 @@ public class SchedulerApplicationAttempt {
       rmContainer = 
           new RMContainerImpl(container, getApplicationAttemptId(), 
               node.getNodeID(), appSchedulingInfo.getUser(), rmContext);
-        
+
       Resources.addTo(currentReservation, container.getResource());
       
       // Reset the re-reservation count
@@ -407,8 +410,8 @@ public class SchedulerApplicationAttempt {
       for (Priority priority : getPriorities()) {
         Map<String, ResourceRequest> requests = getResourceRequests(priority);
         if (requests != null) {
-          LOG.debug("showRequests:" + " application=" + getApplicationId() + 
-              " headRoom=" + getHeadroom() + 
+          LOG.debug("showRequests:" + " application=" + getApplicationId() +
+              " headRoom=" + getHeadroom() +
               " currentConsumption=" + currentConsumption.getMemory());
           for (ResourceRequest request : requests.values()) {
             LOG.debug("showRequests:" + " application=" + getApplicationId()
@@ -454,12 +457,26 @@ public class SchedulerApplicationAttempt {
       .hasNext();) {
       RMContainer rmContainer = i.next();
       Container container = rmContainer.getContainer();
+      ContainerType containerType = ContainerType.TASK;
+      // The working knowledge is that masterContainer for AM is null as it
+      // itself is the master container.
+      RMAppAttempt appAttempt =
+              rmContext
+                      .getRMApps()
+                      .get(
+                              container.getId().getApplicationAttemptId()
+                                      .getApplicationId()).getCurrentAppAttempt();
+      if (appAttempt.getMasterContainer() == null
+              && appAttempt.getSubmissionContext().getUnmanagedAM() == false) {
+        containerType = ContainerType.APPLICATION_MASTER;
+      }
       try {
         // create container token and NMToken altogether.
         container.setContainerToken(rmContext.getContainerTokenSecretManager()
-          .createContainerToken(container.getId(), container.getNodeId(),
-            getUser(), container.getResource(), container.getPriority(),
-            rmContainer.getCreationTime(), this.logAggregationContext));
+            .createContainerToken(container.getId(), container.getNodeId(),
+                getUser(), container.getResource(), container.getPriority(),
+                rmContainer.getCreationTime(), this.logAggregationContext,
+                containerType));
         NMToken nmToken =
             rmContext.getNMTokenSecretManager().createAndGetNMToken(getUser(),
               getApplicationAttemptId(), container);

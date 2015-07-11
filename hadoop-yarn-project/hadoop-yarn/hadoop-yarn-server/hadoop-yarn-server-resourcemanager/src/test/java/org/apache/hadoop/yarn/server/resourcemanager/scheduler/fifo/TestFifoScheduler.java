@@ -106,7 +106,7 @@ public class TestFifoScheduler {
   public void setUp() throws Exception {
     resourceManager = new ResourceManager();
     Configuration conf = new Configuration();
-    conf.setClass(YarnConfiguration.RM_SCHEDULER, 
+    conf.setClass(YarnConfiguration.RM_SCHEDULER,
         FifoScheduler.class, ResourceScheduler.class);
     resourceManager = new MockRM(conf);
   }
@@ -610,7 +610,7 @@ public class TestFifoScheduler {
     Assert.assertFalse(fs.getApplicationAttempt(appAttemptId).isBlacklisted(host));
     rm.stop();
   }
-  
+
   @Test
   public void testGetAppsInQueue() throws Exception {
     Application application_0 = new Application("user_0", resourceManager);
