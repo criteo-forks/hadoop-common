@@ -14,6 +14,8 @@ Release 2.6.0 - 2014-11-18
 
   IMPROVEMENTS
 
+    HDFS-8824. Do not use small blocks for balancing the cluster.  (szetszwo)
+
     HDFS-11384. Balancer disperses getBlocks calls to avoid NameNode's rpc queue
     saturation. (shv)
 
