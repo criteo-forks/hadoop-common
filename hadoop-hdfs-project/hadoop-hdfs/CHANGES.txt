@@ -2,6 +2,8 @@ Hadoop HDFS Change Log
 
 Criteo Release
 
+   HDFS-8824. Do not use small blocks for balancing the cluster.  (szetszwo)
+
    HDFS-11384. Balancer disperses getBlocks calls to avoid NameNode's rpc queue
    saturation. (shv)
 
