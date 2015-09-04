@@ -2,7 +2,10 @@ Hadoop YARN Change Log
 
 Criteo Release
 
-   YARN-8559. Expose scheduling configuration info in Resource Manager's /conf 
+   YARN-4024. YARN RM should avoid unnecessary resolving IP when NMs doing heartbeat.
+   (Hong Zhiguo via wangda)
+
+   YARN-8559. Expose scheduling configuration info in Resource Manager's /conf
    endpoint.  Please see commit beda7203da3ee1009cf8ea7d92a89b6837267566 for
    LAKECOMP-498 for the actual patch.
 
@@ -372,7 +375,7 @@ Release 2.6.0 - 2014-11-18
 
     YARN-2682. Updated WindowsSecureContainerExecutor to not use
     DefaultContainerExecutor#getFirstApplicationDir and use getWorkingDir()
-    instead. (Zhihai Xu via jianhe) 
+    instead. (Zhihai Xu via jianhe)
 
     YARN-2209. Replaced AM resync/shutdown command with corresponding exceptions and
     made related MR changes. (Jian He via zjshen)
