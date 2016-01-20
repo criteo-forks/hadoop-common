@@ -2,6 +2,8 @@ Hadoop YARN Change Log
 
 Criteo Release
 
+   YARN-4611. Fix scheduler load simulator to support multi-layer network
+
    YARN-3251. Fixed a deadlock in CapacityScheduler when computing
    absoluteMaxAvailableCapacity in LeafQueue (Craig Welch via wangda)
 
