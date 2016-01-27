@@ -4,6 +4,9 @@ Criteo Release
 
    YARN-4611. Fix scheduler load simulator to support multi-layer network
 
+   YARN-4612. Fix rumen and scheduler load simulator handle killed tasks properly.
+       (Ming Ma via xgong)
+
    YARN-3251. Fixed a deadlock in CapacityScheduler when computing
    absoluteMaxAvailableCapacity in LeafQueue (Craig Welch via wangda)
 
