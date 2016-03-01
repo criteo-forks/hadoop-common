@@ -14,6 +14,8 @@ Release 2.6.0 - 2014-11-18
 
   IMPROVEMENTS
 
+    HDFS-9198. Coalesce IBR processing in the NN. (Daryn Sharp via umamahesh)
+
     HDFS-6841. Use Time.monotonicNow() wherever applicable instead of Time.now()
     (Vinayakumar B via kihwal)
 
