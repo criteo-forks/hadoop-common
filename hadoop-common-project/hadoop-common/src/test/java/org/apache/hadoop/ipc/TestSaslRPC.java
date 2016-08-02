@@ -42,16 +42,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -78,6 +75,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.ipc.Server.Call;
+import org.apache.hadoop.ipc.Server.Connection;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.SaslInputStream;
@@ -445,7 +443,16 @@ public class TestSaslRPC {
       assertEquals(TOKEN, authMethod);
       //QOP must be auth
       assertEquals(expectedQop.saslQop,
-                   RPC.getConnectionIdForProxy(proxy).getSaslQop());            
+                   RPC.getConnectionIdForProxy(proxy).getSaslQop());
+      int n = 0;
+      for (Connection connection : server.getConnections()) {
+        // only qop auth should dispose of the sasl server
+        boolean hasServer = (connection.saslServer != null);
+        assertTrue("qop:" + expectedQop + " hasServer:" + hasServer,
+            (expectedQop == QualityOfProtection.AUTHENTICATION) ^ hasServer);
+        n++;
+      }
+      assertTrue(n > 0);
       proxy.ping();
     } finally {
       server.stop();
