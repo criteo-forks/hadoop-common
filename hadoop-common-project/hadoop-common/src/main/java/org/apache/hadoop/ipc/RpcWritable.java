@@ -126,6 +126,10 @@ public abstract class RpcWritable implements Writable {
       }
       return (T)message;
     }
+
+    Message getMessage() {
+      return message;
+    }
   }
 
   // adapter to allow decoding of writables and protobufs from a byte buffer.
