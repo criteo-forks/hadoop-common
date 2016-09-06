@@ -51,7 +51,7 @@ public class JobConfigurationParser {
    *         configuration xml.
    * @throws IOException
    */
-  static Properties parse(InputStream input) throws IOException {
+  public static Properties parse(InputStream input) throws IOException {
     Properties result = new Properties();
 
     try {

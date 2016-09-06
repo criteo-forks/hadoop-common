@@ -158,7 +158,7 @@ public class ParsedJob extends LoggedJob {
   }
 
   /** Dump the extra info of ParsedJob */
-  void dumpParsedJob() {
+  public void dumpParsedJob() {
     LOG.info("ParsedJob details:" + obtainTotalCounters() + ";"
         + obtainMapCounters() + ";" + obtainReduceCounters()
         + "\n" + obtainJobConfpath() + "\n" + obtainJobAcls()
