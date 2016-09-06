@@ -115,7 +115,7 @@ public class ParsedTask extends LoggedTask {
   }
 
   /** Dump the extra info of ParsedTask */
-  void dumpParsedTask() {
+  public void dumpParsedTask() {
     LOG.info("ParsedTask details:" + obtainCounters()
         + "\n" + obtainFailedDueToAttemptId()
         + "\nPreferred Locations are:");
