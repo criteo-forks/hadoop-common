@@ -770,8 +770,17 @@ public class BlockManager implements BlockStatsMXBean {
       return false; // already completed (e.g. by syncBlock)
     
     final boolean b = commitBlock((BlockInfoUnderConstruction)lastBlock, commitBlock);
-    if(countNodes(lastBlock).liveReplicas() >= minReplication)
-      completeBlock(bc, bc.numBlocks()-1, false);
+
+    // Count replicas on decommissioning nodes, as these will not be
+    // decommissioned unless recovery/completing last block has finished
+    NumberReplicas numReplicas = countNodes(lastBlock);
+    int numUsableReplicas = numReplicas.liveReplicas() +
+        numReplicas.decommissioning() +
+        numReplicas.liveEnteringMaintenanceReplicas();
+
+    if (numUsableReplicas >= minReplication) {
+      completeBlock(bc, bc.numBlocks() - 1, false);
+    }
     return b;
   }
 
