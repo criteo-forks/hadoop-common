@@ -2,6 +2,9 @@ Hadoop HDFS Change Log
 
 Criteo Release
 
+   HDFS-11499. Decommissioning stuck because of failing recovery.
+   Contributed by Lukas Majercak and Manoj Govindassamy.
+
    HDFS-10453. ReplicationMonitor thread could stuck for long time due to the
    race between replication and delete of same file in a large cluster. (Contributed by He Xiaoqiao)
 
