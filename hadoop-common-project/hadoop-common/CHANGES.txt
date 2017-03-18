@@ -6,6 +6,9 @@ Release 2.6.0 - 2014-11-18
 
   NEW FEATURES
 
+    HADOOP-14169. Implement listStatusIterator, listLocatedStatus for ViewFs.
+    (Erik Krogen via shv)
+
     HADOOP-11812. Implement listLocatedStatus for ViewFileSystem to speed up
     split calculation (gera)
 
