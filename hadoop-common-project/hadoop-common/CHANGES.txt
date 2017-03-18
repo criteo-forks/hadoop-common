@@ -2,6 +2,9 @@ Hadoop Change Log
 
 Criteo Release
 
+  HADOOP-14169. Implement listStatusIterator, listLocatedStatus for ViewFs.
+  (Erik Krogen via shv)
+
   HADOOP-11812. Implement listLocatedStatus for ViewFileSystem to speed up
   split calculation (gera)
 
