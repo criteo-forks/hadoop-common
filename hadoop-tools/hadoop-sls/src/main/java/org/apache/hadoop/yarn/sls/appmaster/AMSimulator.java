@@ -316,13 +316,12 @@ public abstract class AMSimulator extends TaskRunner.Task {
   private void trackApp() {
     if (isTracked) {
       ((SchedulerWrapper) rm.getResourceScheduler())
-              .addTrackedApp(appAttemptId, oldAppId);
+          .addTrackedApp(appId, oldAppId);
     }
   }
   public void untrackApp() {
     if (isTracked) {
-      ((SchedulerWrapper) rm.getResourceScheduler())
-              .removeTrackedApp(appAttemptId, oldAppId);
+      ((SchedulerWrapper) rm.getResourceScheduler()).removeTrackedApp(oldAppId);
     }
   }
   
