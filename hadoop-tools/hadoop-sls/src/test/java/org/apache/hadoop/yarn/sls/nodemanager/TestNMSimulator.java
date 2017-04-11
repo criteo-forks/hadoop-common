@@ -23,6 +23,7 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
+import org.apache.hadoop.yarn.util.UTCClock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
@@ -50,7 +51,7 @@ public class TestNMSimulator {
   @Test
   public void testNMSimulator() throws Exception {
     // Register one node
-    NMSimulator node1 = new NMSimulator();
+    NMSimulator node1 = new NMSimulator(new UTCClock());
     node1.init("/rack1/node1", GB * 10, 10, 0, 1000, rm);
     node1.middleStep();
 

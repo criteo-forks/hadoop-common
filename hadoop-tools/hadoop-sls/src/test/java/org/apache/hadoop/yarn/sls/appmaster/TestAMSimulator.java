@@ -22,10 +22,13 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
+import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.apache.hadoop.yarn.sls.scheduler.FairSchedulerMetrics;
 import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
+import org.apache.hadoop.yarn.util.Clock;
+import org.apache.hadoop.yarn.util.UTCClock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -57,9 +60,14 @@ public class TestAMSimulator {
     rm = new ResourceManager();
     rm.init(conf);
     rm.start();
+    SLSRunner.initRunner(new UTCClock());
   }
 
   class MockAMSimulator extends AMSimulator {
+
+    public MockAMSimulator(Clock clock){
+      super(clock);
+    }
     @Override
     protected void processResponseQueue()
         throws InterruptedException, YarnException, IOException {
@@ -108,7 +116,7 @@ public class TestAMSimulator {
   @Test
   public void testAMSimulator() throws Exception {
     // Register one app
-    MockAMSimulator app = new MockAMSimulator();
+    MockAMSimulator app = new MockAMSimulator(new UTCClock());
     String appId = "app1";
     String queue = "default";
     List<ContainerSimulator> containers = new ArrayList<>();

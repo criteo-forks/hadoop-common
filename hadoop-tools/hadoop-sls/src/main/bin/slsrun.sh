@@ -21,6 +21,7 @@ printUsage() {
   echo "                 [--nodes=<SLS_NODES_FILE>]"
   echo "                 [--track-jobs=<JOBID1,JOBID2,...>]"
   echo "                 [--print-simulation]"
+  echo "                 [--timescalefactor=<factor>]"
   echo                  
 }
 ###############################################################################
@@ -45,6 +46,9 @@ parseArgs() {
       ;;
     --print-simulation)
       printsimulation="true"
+      ;;
+    --timescalefactor=*)
+      timescalefactor=${i#*=}
       ;;
     *)
       echo "Invalid option"
@@ -100,6 +104,10 @@ runSimulation() {
   
   if [[ "${printsimulation}" == "true" ]] ; then
     args="${args} -printsimulation"
+  fi
+
+  if [[ $"${timescalefactor}" != "" ]] ; then
+    args="${args} -timescalefactor ${timescalefactor}"
   fi
 
   hadoop org.apache.hadoop.yarn.sls.SLSRunner ${args}

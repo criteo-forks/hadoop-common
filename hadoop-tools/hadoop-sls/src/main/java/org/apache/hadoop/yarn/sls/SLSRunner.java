@@ -63,7 +63,10 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.sls.utils.ClockHolder;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
+import org.apache.hadoop.yarn.sls.utils.ScaleClock;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.log4j.Logger;
 import org.codehaus.jackson.JsonFactory;
@@ -72,9 +75,10 @@ import org.codehaus.jackson.map.ObjectMapper;
 @Private
 @Unstable
 public class SLSRunner {
+  private final ScaleClock clock;
   // RM, Runner
   private ResourceManager rm;
-  private static TaskRunner runner = new TaskRunner();
+  private static TaskRunner runner;
   private String[] inputTraces;
   private Configuration conf;
   private Map<String, Integer> queueAppNumMap;
@@ -109,7 +113,7 @@ public class SLSRunner {
   
   public SLSRunner(boolean isSLS, String inputTraces[], String nodeFile,
                    String outputDir, Set<String> trackedApps,
-                   boolean printsimulation)
+                   boolean printsimulation, long scaleFactor)
           throws IOException, ClassNotFoundException {
     this.isSLS = isSLS;
     this.inputTraces = inputTraces.clone();
@@ -117,12 +121,16 @@ public class SLSRunner {
     this.trackedApps = trackedApps;
     this.printSimulation = printsimulation;
     metricsOutputDir = outputDir;
-    
+    this.clock =  new ScaleClock(scaleFactor);
+    ClockHolder.init(clock);
+
     nmMap = new HashMap<NodeId, NMSimulator>();
     queueAppNumMap = new HashMap<String, Integer>();
     amMap = new HashMap<String, AMSimulator>();
     amClassMap = new HashMap<String, Class>();
-    
+
+    initRunner(clock);
+
     // runner configuration
     conf = new Configuration(false);
     conf.addResource("sls-runner.xml");
@@ -139,14 +147,20 @@ public class SLSRunner {
       }
     }
   }
-  
+
+  public static void initRunner(Clock clock) {
+    SLSRunner.runner = new TaskRunner(clock);
+  }
+
   public void start() throws Exception {
+
+
     // start resource manager
     startRM();
     // start node managers
-    startNM();
+    startNM(clock);
     // start application masters
-    startAM();
+    startAM(clock);
     // set queue & tracked apps information
     ((SchedulerWrapper) rm.getResourceScheduler())
                             .setQueueSet(this.queueAppNumMap.keySet());
@@ -183,7 +197,7 @@ public class SLSRunner {
     rm.start();
   }
 
-  private void startNM() throws YarnException, IOException {
+  private void startNM(Clock clock) throws YarnException, IOException {
     // nm configuration
     nmMemoryMB = conf.getInt(SLSConfiguration.NM_MEMORY_MB,
             SLSConfiguration.NM_MEMORY_MB_DEFAULT);
@@ -213,7 +227,7 @@ public class SLSRunner {
     Set<String> rackSet = new HashSet<String>();
     for (String hostName : nodeSet) {
       // we randomize the heartbeat start time from zero to 1 interval
-      NMSimulator nm = new NMSimulator();
+      NMSimulator nm = new NMSimulator(clock);
       nm.init(hostName, nmMemoryMB, nmVCores, 
           random.nextInt(heartbeatInterval), heartbeatInterval, rm);
       nmMap.put(nm.getNode().getNodeID(), nm);
@@ -246,7 +260,7 @@ public class SLSRunner {
   }
 
   @SuppressWarnings("unchecked")
-  private void startAM() throws YarnException, IOException {
+  private void startAM(Clock clock) throws YarnException, IOException {
     // application/container configuration
     int heartbeatInterval = conf.getInt(
             SLSConfiguration.AM_HEARTBEAT_INTERVAL_MS,
@@ -260,9 +274,9 @@ public class SLSRunner {
 
     // application workload
     if (isSLS) {
-      startAMFromSLSTraces(containerResource, heartbeatInterval);
+      startAMFromSLSTraces(clock, containerResource, heartbeatInterval);
     } else {
-      startAMFromRumenTraces(containerResource, heartbeatInterval);
+      startAMFromRumenTraces(clock, containerResource, heartbeatInterval);
     }
     numAMs = amMap.size();
     remainingApps = numAMs;
@@ -272,7 +286,7 @@ public class SLSRunner {
    * parse workload information from sls trace files
    */
   @SuppressWarnings("unchecked")
-  private void startAMFromSLSTraces(Resource containerResource,
+  private void startAMFromSLSTraces(Clock clock, Resource containerResource,
                                     int heartbeatInterval) throws IOException {
     // parse from sls traces
     JsonFactory jsonF = new JsonFactory();
@@ -334,7 +348,7 @@ public class SLSRunner {
             int priority = Integer.parseInt(
                     jsonTask.get("container.priority").toString());
             String type = jsonTask.get("container.type").toString();
-            containerList.add(new ContainerSimulator(res,
+            containerList.add(new ContainerSimulator(clock, res,
                     lifeTime, hostname, priority, type));
           }
 
@@ -362,7 +376,7 @@ public class SLSRunner {
    * parse workload information from rumen trace files
    */
   @SuppressWarnings("unchecked")
-  private void startAMFromRumenTraces(Resource containerResource,
+  private void startAMFromRumenTraces(Clock clock,Resource containerResource,
                                       int heartbeatInterval)
           throws IOException {
     Configuration conf = new Configuration();
@@ -412,7 +426,7 @@ public class SLSRunner {
             String hostname = taskAttempt.getHostName().getValue();
             long containerLifeTime = taskAttempt.getFinishTime()
                     - taskAttempt.getStartTime();
-            containerList.add(new ContainerSimulator(containerResource,
+            containerList.add(new ContainerSimulator(clock, containerResource,
                     containerLifeTime, hostname, 10, "map"));
           }
 
@@ -426,7 +440,7 @@ public class SLSRunner {
             String hostname = taskAttempt.getHostName().getValue();
             long containerLifeTime = taskAttempt.getFinishTime()
                     - taskAttempt.getStartTime();
-            containerList.add(new ContainerSimulator(containerResource,
+            containerList.add(new ContainerSimulator(clock, containerResource,
                     containerLifeTime, hostname, 20, "reduce"));
           }
 
@@ -521,6 +535,7 @@ public class SLSRunner {
             "jobs to be tracked during simulating");
     options.addOption("printsimulation", false,
             "print out simulation information");
+    options.addOption("timescalefactor", true, "time scale factor");
     
     CommandLineParser parser = new GnuParser();
     CommandLine cmd = parser.parse(options, args);
@@ -528,7 +543,9 @@ public class SLSRunner {
     String inputRumen = cmd.getOptionValue("inputrumen");
     String inputSLS = cmd.getOptionValue("inputsls");
     String output = cmd.getOptionValue("output");
-    
+    String scaleFactorStr = cmd.getOptionValue("timescalefactor");
+    long scaleFactor = 1L;
+
     if ((inputRumen == null && inputSLS == null) || output == null) {
       System.err.println();
       System.err.println("ERROR: Missing input or output file");
@@ -538,6 +555,26 @@ public class SLSRunner {
               "[-printsimulation]");
       System.err.println();
       System.exit(1);
+    }
+
+    if(scaleFactorStr != null) {
+      try {
+        long factor = Long.parseLong(scaleFactorStr);
+        if (factor <1) {
+          System.err.println();
+          System.err.println("ERROR: timescalefactor should be a long > 0");
+          System.err.println();
+          System.exit(1);
+        } else {
+          scaleFactor = factor;
+        }
+      } catch (NumberFormatException e){
+        System.err.println();
+        System.err.println("ERROR: timescalefactor should be a long");
+        System.err.println();
+        System.exit(1);
+      }
+
     }
     
     File outputFile = new File(output);
@@ -560,7 +597,9 @@ public class SLSRunner {
     boolean isSLS = inputSLS != null;
     String inputFiles[] = isSLS ? inputSLS.split(",") : inputRumen.split(",");
     SLSRunner sls = new SLSRunner(isSLS, inputFiles, nodeFile, output,
-        trackedJobSet, cmd.hasOption("printsimulation"));
+        trackedJobSet, cmd.hasOption("printsimulation"), scaleFactor);
     sls.start();
+
+
   }
 }

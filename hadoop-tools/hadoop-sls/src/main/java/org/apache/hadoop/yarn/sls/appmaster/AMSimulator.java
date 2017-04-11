@@ -65,6 +65,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Logger;
 
@@ -110,7 +111,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   
   protected final Logger LOG = Logger.getLogger(AMSimulator.class);
   
-  public AMSimulator() {
+  public AMSimulator(Clock clock) {
+    super(clock);
     this.responseQueue = new LinkedBlockingQueue<AllocateResponse>();
   }
 
@@ -136,7 +138,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
    */
   @Override
   public void firstStep() throws Exception {
-    simulateStartTimeMS = System.currentTimeMillis() - 
+    simulateStartTimeMS = clock.getTime() -
                           SLSRunner.getRunner().getStartTimeMS();
 
     // submit application, waiting until ACCEPTED
@@ -187,7 +189,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
       }
     });
 
-    simulateFinishTimeMS = System.currentTimeMillis() -
+    simulateFinishTimeMS = clock.getTime() -
         SLSRunner.getRunner().getStartTimeMS();
     // record job running information
     ((SchedulerWrapper)rm.getResourceScheduler())
