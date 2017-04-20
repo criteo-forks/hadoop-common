@@ -72,6 +72,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.sls.appmaster.AMSimulator;
 import org.apache.hadoop.yarn.sls.conf.SLSConfiguration;
+import org.apache.hadoop.yarn.sls.mockdns.MockDNSServiceDescriptor;
 import org.apache.hadoop.yarn.sls.nodemanager.NMSimulator;
 import org.apache.hadoop.yarn.sls.resourcemanager.MockAMLauncher;
 import org.apache.hadoop.yarn.sls.scheduler.SLSCapacityScheduler;
@@ -847,6 +848,7 @@ public class SLSRunner extends Configured implements Tool {
   public int run(final String[] argv) throws IOException, InterruptedException,
       ParseException, ClassNotFoundException, YarnException {
 
+    System.setProperty("sun.net.spi.nameservice.provider.1", "dns,"+ MockDNSServiceDescriptor.MOCKDNS);
     Options options = new Options();
 
     // Left for compatibility
