@@ -45,6 +45,8 @@ import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
 import org.apache.hadoop.yarn.sls.SLSRunner;
+import org.apache.hadoop.yarn.sls.utils.ClockHolder;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.log4j.Logger;
 
 @Private
@@ -117,6 +119,15 @@ public class MRAMSimulator extends AMSimulator {
   private final static int MR_AM_CONTAINER_RESOURCE_VCORES = 1;
 
   public final Logger LOG = Logger.getLogger(MRAMSimulator.class);
+
+  //because of refelection
+  public MRAMSimulator(){
+    this(ClockHolder.getInstance());
+  }
+
+  public MRAMSimulator(Clock clock){
+    super(clock);
+  }
 
   public void init(int id, int heartbeatInterval,
       List<ContainerSimulator> containerList, ResourceManager rm, SLSRunner se,
@@ -387,7 +398,7 @@ public class MRAMSimulator extends AMSimulator {
   @Override
   protected void checkStop() {
     if (isFinished) {
-      super.setEndTime(System.currentTimeMillis());
+      super.setEndTime(clock.getTime());
     }
   }
 

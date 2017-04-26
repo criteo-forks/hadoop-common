@@ -50,6 +50,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Logger;
 
@@ -75,6 +76,10 @@ public class NMSimulator extends TaskRunner.Task {
   // heart beat response id
   private int RESPONSE_ID = 1;
   private final static Logger LOG = Logger.getLogger(NMSimulator.class);
+
+  public NMSimulator(Clock clock){
+    super(clock);
+  }
   
   public void init(String nodeIdStr, int memory, int cores,
           int dispatchTime, int heartBeatInterval, ResourceManager rm)
@@ -231,8 +236,8 @@ public class NMSimulator extends TaskRunner.Task {
             "container ({1}).", node.getNodeID(), container.getId()));
     if (lifeTimeMS != -1) {
       // normal container
-      ContainerSimulator cs = new ContainerSimulator(container.getId(),
-              container.getResource(), lifeTimeMS + System.currentTimeMillis(),
+      ContainerSimulator cs = new ContainerSimulator(clock, container.getId(),
+              container.getResource(), lifeTimeMS + clock.getTime(),
               lifeTimeMS);
       containerQueue.add(cs);
       runningContainers.put(cs.getId(), cs);

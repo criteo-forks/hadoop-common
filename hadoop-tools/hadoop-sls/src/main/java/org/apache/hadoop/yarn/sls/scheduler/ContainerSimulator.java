@@ -25,10 +25,12 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.Clock;
 
 @Private
 @Unstable
 public class ContainerSimulator implements Delayed {
+  private final Clock clock;
   // id
   private ContainerId id;
   // resource allocated
@@ -47,8 +49,9 @@ public class ContainerSimulator implements Delayed {
   /**
    * invoked when AM schedules containers to allocate
    */
-  public ContainerSimulator(Resource resource, long lifeTime,
-      String hostname, int priority, String type) {
+  public ContainerSimulator(Clock clock, Resource resource, long lifeTime,
+                            String hostname, int priority, String type) {
+    this.clock = clock;
     this.resource = resource;
     this.lifeTime = lifeTime;
     this.hostname = hostname;
@@ -59,8 +62,9 @@ public class ContainerSimulator implements Delayed {
   /**
    * invoke when NM schedules containers to run
    */
-  public ContainerSimulator(ContainerId id, Resource resource, long endTime,
+  public ContainerSimulator(Clock clock, ContainerId id, Resource resource, long endTime,
       long lifeTime) {
+    this.clock = clock;
     this.id = id;
     this.resource = resource;
     this.endTime = endTime;
@@ -87,7 +91,7 @@ public class ContainerSimulator implements Delayed {
 
   @Override
   public long getDelay(TimeUnit unit) {
-    return unit.convert(endTime - System.currentTimeMillis(),
+    return unit.convert(endTime - clock.getTime(),
           TimeUnit.MILLISECONDS);
   }
   

@@ -65,11 +65,12 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Logger;
 
 import org.apache.hadoop.yarn.sls.scheduler.ContainerSimulator;
-import org.apache.hadoop.yarn.sls.scheduler.ResourceSchedulerWrapper;
+import org.apache.hadoop.yarn.sls.scheduler.SchedulerWrapper;
 import org.apache.hadoop.yarn.sls.SLSRunner;
 import org.apache.hadoop.yarn.sls.scheduler.TaskRunner;
 import org.apache.hadoop.yarn.sls.utils.SLSUtils;
@@ -110,7 +111,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
   
   protected final Logger LOG = Logger.getLogger(AMSimulator.class);
   
-  public AMSimulator() {
+  public AMSimulator(Clock clock) {
+    super(clock);
     this.responseQueue = new LinkedBlockingQueue<AllocateResponse>();
   }
 
@@ -136,7 +138,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
    */
   @Override
   public void firstStep() throws Exception {
-    simulateStartTimeMS = System.currentTimeMillis() - 
+    simulateStartTimeMS = clock.getTime() -
                           SLSRunner.getRunner().getStartTimeMS();
 
     // submit application, waiting until ACCEPTED
@@ -187,10 +189,10 @@ public abstract class AMSimulator extends TaskRunner.Task {
       }
     });
 
-    simulateFinishTimeMS = System.currentTimeMillis() -
+    simulateFinishTimeMS = clock.getTime() -
         SLSRunner.getRunner().getStartTimeMS();
     // record job running information
-    ((ResourceSchedulerWrapper)rm.getResourceScheduler())
+    ((SchedulerWrapper)rm.getResourceScheduler())
          .addAMRuntime(appId, 
                       traceStartTimeMS, traceFinishTimeMS, 
                       simulateStartTimeMS, simulateFinishTimeMS);
@@ -315,14 +317,13 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
   private void trackApp() {
     if (isTracked) {
-      ((ResourceSchedulerWrapper) rm.getResourceScheduler())
-              .addTrackedApp(appAttemptId, oldAppId);
+      ((SchedulerWrapper) rm.getResourceScheduler())
+          .addTrackedApp(appId, oldAppId);
     }
   }
   public void untrackApp() {
     if (isTracked) {
-      ((ResourceSchedulerWrapper) rm.getResourceScheduler())
-              .removeTrackedApp(appAttemptId, oldAppId);
+      ((SchedulerWrapper) rm.getResourceScheduler()).removeTrackedApp(oldAppId);
     }
   }
   

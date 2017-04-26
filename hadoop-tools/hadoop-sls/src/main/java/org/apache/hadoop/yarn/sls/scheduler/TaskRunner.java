@@ -28,13 +28,17 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.util.Clock;
 
 @Private
 @Unstable
 public class TaskRunner {
+
+
   @Private
   @Unstable
   public abstract static class Task implements Runnable, Delayed {
+    protected final Clock clock;
     private long start;
     private long end;
     private long nextRun;
@@ -43,7 +47,9 @@ public class TaskRunner {
     private long repeatInterval;
     private Queue<Task> queue;
 
-    public Task(){}
+    public Task(Clock clock){
+      this.clock = clock;
+    }
     
     //values in milliseconds, start/end are milliseconds from now
     public void init(long startTime, long endTime, long repeatInterval) {
@@ -108,7 +114,7 @@ public class TaskRunner {
 
     @Override
     public long getDelay(TimeUnit unit) {
-      return unit.convert(nextRun - System.currentTimeMillis(),
+      return unit.convert(nextRun - clock.getTime(),
         TimeUnit.MILLISECONDS);
     }
 
@@ -134,12 +140,14 @@ public class TaskRunner {
   }
 
   private DelayQueue queue;
+  private final Clock clock;
   private int threadPoolSize;
   private ThreadPoolExecutor executor;
   private long startTimeMS = 0;
   
-  public TaskRunner() {
+  public TaskRunner(Clock clock) {
     queue = new DelayQueue();
+    this.clock = clock;
   }
 
   public void setQueueSize(int threadPoolSize) {
@@ -158,7 +166,7 @@ public class TaskRunner {
       TimeUnit.MILLISECONDS, queue);
     executor.prestartAllCoreThreads();
 
-    startTimeMS = System.currentTimeMillis();
+    startTimeMS = clock.getTime();
     for (Object d : preStartQueue) {
       schedule((Task) d, startTimeMS);
     }
@@ -176,7 +184,7 @@ public class TaskRunner {
   }
 
   public void schedule(Task task) {
-    schedule(task, System.currentTimeMillis());
+    schedule(task, clock.getTime());
   }
 
   public long getStartTimeMS() {
