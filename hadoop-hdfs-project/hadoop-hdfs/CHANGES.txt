@@ -2,6 +2,9 @@ Hadoop HDFS Change Log
 
 Criteo Release
 
+   HDFS-11384. Balancer disperses getBlocks calls to avoid NameNode's rpc queue
+   saturation. (shv)
+
    HDFS-9003. ForkJoin thread pool leaks. (Kihwal Lee via jing9)
 
    HDFS-8865. Improve quota initialization performance. Contributed by Kihwal Lee.
