@@ -125,6 +125,11 @@ public class BlockManagerTestUtil {
     }
   }
 
+  public static HeartbeatManager getHeartbeatManager(
+      final BlockManager blockManager) {
+    return blockManager.getDatanodeManager().getHeartbeatManager();
+  }
+
   /**
    * @return corruptReplicas from block manager
    */
