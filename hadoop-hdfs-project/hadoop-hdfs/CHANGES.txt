@@ -13,6 +13,10 @@ Release 2.6.0 - 2014-11-18
     tasks below for features and contributors).
 
   IMPROVEMENTS
+
+    HDFS-11384. Balancer disperses getBlocks calls to avoid NameNode's rpc queue
+    saturation. (shv)
+
     HDFS-9106. Transfer failure during pipeline recovery causes permanent
     write failures (kihwal)
 
