@@ -99,7 +99,7 @@ import com.google.common.collect.Lists;
  * caching directives, we will schedule caching and uncaching work.
  */
 @InterfaceAudience.LimitedPrivate({"HDFS"})
-public final class CacheManager {
+public class CacheManager {
   public static final Logger LOG = LoggerFactory.getLogger(CacheManager.class);
 
   private static final float MIN_CACHED_BLOCKS_PERCENT = 0.001f;
@@ -187,7 +187,6 @@ public final class CacheManager {
       this.directives = directives;
     }
   }
-
   CacheManager(FSNamesystem namesystem, Configuration conf,
       BlockManager blockManager) {
     this.namesystem = namesystem;
