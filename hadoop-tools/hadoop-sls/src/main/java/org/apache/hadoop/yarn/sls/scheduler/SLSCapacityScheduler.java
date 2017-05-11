@@ -277,14 +277,12 @@ public class SLSCapacityScheduler extends CapacityScheduler implements
 	      if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_REMOVED
 	          && schedulerEvent instanceof AppAttemptRemovedSchedulerEvent) {
 	        SLSRunner.decreaseRemainingApps();
-	        AppAttemptRemovedSchedulerEvent appRemoveEvent =
+          AppAttemptRemovedSchedulerEvent appRemoveEvent =
 	                (AppAttemptRemovedSchedulerEvent) schedulerEvent;
-	        ApplicationAttemptId appAttemptId =
-	                appRemoveEvent.getApplicationAttemptID();
 	        appQueueMap.remove(appRemoveEvent.getApplicationAttemptID());
 	      } else if (schedulerEvent.getType() == SchedulerEventType.APP_ATTEMPT_ADDED
 	          && schedulerEvent instanceof AppAttemptAddedSchedulerEvent) {
-	        AppAttemptAddedSchedulerEvent appAddEvent =
+          AppAttemptAddedSchedulerEvent appAddEvent =
 	                (AppAttemptAddedSchedulerEvent) schedulerEvent;
             SchedulerApplication app =
                     applications.get(appAddEvent.getApplicationAttemptId().getApplicationId());

@@ -86,7 +86,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
   protected SLSRunner se;
   // application
   protected ApplicationId appId;
-  protected ApplicationAttemptId appAttemptId;
+  protected volatile ApplicationAttemptId appAttemptId;
   protected String oldAppId;    // jobId from the jobhistory file
   // record factory
   protected final static RecordFactory recordFactory =
@@ -410,5 +410,11 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
   public ApplicationAttemptId getApplicationAttemptId() {
     return appAttemptId;
+  }
+
+  public void notifyCleanUp() {
+    this.isAMContainerRunning = false;
+    this.amContainer = null;
+    this.appAttemptId = null;
   }
 }

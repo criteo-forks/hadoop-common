@@ -22,6 +22,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -110,6 +111,15 @@ public class MockAMLauncher extends ApplicationMasterLauncher
 
       throw new YarnRuntimeException(
           "Didn't find any AMSimulator for applicationId=" + appId);
+    } else if (AMLauncherEventType.CLEANUP == event.getType()) {
+      ApplicationAttemptId applicationAttemptId = event.getAppAttempt().getAppAttemptId();
+      for (AMSimulator ams : amMap.values()) {
+        if (ams.getApplicationAttemptId() != null && ams.getApplicationAttemptId().equals(applicationAttemptId)) {
+          ams.notifyCleanUp();
+
+        }
+      }
+
     }
   }
 }
