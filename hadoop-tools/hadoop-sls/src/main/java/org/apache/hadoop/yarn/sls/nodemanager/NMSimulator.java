@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -72,7 +73,8 @@ public class NMSimulator extends TaskRunner.Task {
   // resource manager
   private ResourceManager rm;
   // heart beat response id
-  private int responseId = 0;
+  private AtomicInteger responseId = new AtomicInteger(0);
+
   private float resourceUtilizationRatio;
   private final static Logger LOG = LoggerFactory.getLogger(NMSimulator.class);
   
@@ -135,7 +137,7 @@ public class NMSimulator extends TaskRunner.Task {
     ns.setContainersStatuses(generateContainerStatusList());
     ns.setNodeId(node.getNodeID());
     ns.setKeepAliveApplications(new ArrayList<ApplicationId>());
-    ns.setResponseId(responseId++);
+    ns.setResponseId(responseId.getAndIncrement());
     ns.setNodeHealthStatus(NodeHealthStatus.newInstance(true, "", 0));
 
     //set node & containers utilization
