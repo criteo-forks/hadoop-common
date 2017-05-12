@@ -24,6 +24,7 @@ import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.codehaus.jackson.JsonFactory;
+import org.codehaus.jackson.JsonParser;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.map.ObjectWriter;
 
@@ -126,7 +127,7 @@ public class RumenToSLSConverter {
         ObjectMapper mapper = new ObjectMapper();
         ObjectWriter writer = mapper.defaultPrettyPrintingWriter();
         Iterator<Map> i = mapper.readValues(
-                new JsonFactory().createJsonParser(input), Map.class);
+                new JsonFactory().createJsonParser(input).enable(JsonParser.Feature.ALLOW_COMMENTS), Map.class);
         while (i.hasNext()) {
           Map m = i.next();
           output.write(writer.writeValueAsString(createSLSJob(m)) + EOL);
@@ -166,8 +167,8 @@ public class RumenToSLSConverter {
   @SuppressWarnings("unchecked")
   private static Map createSLSJob(Map rumenJob) {
     Map json = new LinkedHashMap();
-    long jobStart = (Long) rumenJob.get("submitTime");
-    long jobFinish = (Long) rumenJob.get("finishTime");
+    long jobStart = ((Number) rumenJob.get("submitTime")).longValue();
+    long jobFinish = ((Number) rumenJob.get("finishTime")).longValue();
     String jobId = rumenJob.get("jobID").toString();
     String queue = rumenJob.get("queue").toString();
     String user = rumenJob.get("user").toString();
@@ -211,25 +212,29 @@ public class RumenToSLSConverter {
       Map rumenTask = (Map) e;
       for (Object ee : (List) rumenTask.get("attempts"))  {
         Map rumenAttempt = (Map) ee;
-        long taskStart = (Long) rumenAttempt.get("startTime");
-        long taskFinish = (Long) rumenAttempt.get("finishTime");
+        long taskStart = ((Number) rumenAttempt.get("startTime")).longValue();
+        long taskFinish = ((Number) rumenAttempt.get("finishTime")).longValue();
         String hostname = (String) rumenAttempt.get("hostName");
         taskStart = taskStart - baseline + offset;
         taskFinish = taskFinish - baseline + offset;
-        Map task = new LinkedHashMap();
-        task.put("container.host", hostname);
-        task.put("container.start.ms", taskStart);
-        task.put("container.end.ms", taskFinish);
-        task.put("container.priority", priority);
-        task.put("container.type", taskType);
-        array.add(task);
-        String rackHost[] = SLSUtils.getRackHostName(hostname);
-        if (rackNodeMap.containsKey(rackHost[0])) {
-          rackNodeMap.get(rackHost[0]).add(rackHost[1]);
+        if(hostname == null){
+         System.err.println("Warning: Ignoring task attempt because of no hostName " + rumenAttempt.toString());
         } else {
-          Set<String> hosts = new TreeSet<String>();
-          hosts.add(rackHost[1]);
-          rackNodeMap.put(rackHost[0], hosts);
+          Map task = new LinkedHashMap();
+          task.put("container.host", hostname);
+          task.put("container.start.ms", taskStart);
+          task.put("container.end.ms", taskFinish);
+          task.put("container.priority", priority);
+          task.put("container.type", taskType);
+          array.add(task);
+          String rackHost[] = SLSUtils.getRackHostName(hostname);
+          if (rackNodeMap.containsKey(rackHost[0])) {
+            rackNodeMap.get(rackHost[0]).add(rackHost[1]);
+          } else {
+            Set<String> hosts = new TreeSet<String>();
+            hosts.add(rackHost[1]);
+            rackNodeMap.put(rackHost[0], hosts);
+          }
         }
       }
     }
