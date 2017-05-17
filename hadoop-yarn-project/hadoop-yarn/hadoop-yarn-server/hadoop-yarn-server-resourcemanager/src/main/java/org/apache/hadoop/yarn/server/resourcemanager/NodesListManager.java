@@ -33,6 +33,8 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.HostsFileReader;
+import org.apache.hadoop.util.HostsFileReader.HostDetails;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -60,7 +62,7 @@ public class NodesListManager extends AbstractService implements
   private Configuration conf;
   private Set<RMNode> unusableRMNodesConcurrentSet = Collections
       .newSetFromMap(new ConcurrentHashMap<RMNode,Boolean>());
-  
+
   private final RMContext rmContext;
 
   private String includesFile;
@@ -104,14 +106,11 @@ public class NodesListManager extends AbstractService implements
         conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, 
             YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH));
 
-    Set<String> hostsList = new HashSet<String>();
-    Set<String> excludeList = new HashSet<String>();
-    hostsReader.getHostDetails(hostsList, excludeList);
-
-    for (String include : hostsList) {
+    HostDetails hostDetails = hostsReader.getHostDetails();
+    for (String include : hostDetails.getIncludedHosts()) {
       LOG.debug("include: " + include);
     }
-    for (String exclude : excludeList) {
+    for (String exclude : hostDetails.getExcludedHosts()) {
       LOG.debug("exclude: " + exclude);
     }
   }
@@ -157,15 +156,15 @@ public class NodesListManager extends AbstractService implements
 
   public boolean isValidNode(String hostName) {
     String ip = NetUtils.normalizeHostName(hostName);
-    Set<String> hostsList = new HashSet<String>();
-    Set<String> excludeList = new HashSet<String>();
-    hostsReader.getHostDetails(hostsList, excludeList);
+    HostDetails hostDetails = hostsReader.getHostDetails();
+    Set<String> hostsList = hostDetails.getIncludedHosts();
+    Set<String> excludeList = hostDetails.getExcludedHosts();
 
     return (hostsList.isEmpty() || hostsList.contains(hostName) || hostsList
         .contains(ip))
         && !(excludeList.contains(hostName) || excludeList.contains(ip));
-  }
-  
+    }
+
   /**
    * Provides the currently unusable nodes. Copies it into provided collection.
    * @param unUsableNodes

@@ -2,6 +2,9 @@ Hadoop Change Log
 
 Criteo Release
 
+  HADOOP-14412. HostsFileReader#getHostDetails is very expensive on large clusters.
+  Contributed by Jason Lowe.
+
   HADOOP-14169. Implement listStatusIterator, listLocatedStatus for ViewFs.
   (Erik Krogen via shv)
 
