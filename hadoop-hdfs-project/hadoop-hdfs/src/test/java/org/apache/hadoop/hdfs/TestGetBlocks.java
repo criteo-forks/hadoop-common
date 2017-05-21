@@ -184,8 +184,13 @@ public class TestGetBlocks {
     final Random r = new Random();
 
     CONF.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF).numDataNodes(
-        REPLICATION_FACTOR).build();
+    CONF.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY,
+        DEFAULT_BLOCK_SIZE);
+
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(CONF)
+              .numDataNodes(REPLICATION_FACTOR)
+              .storagesPerDatanode(4)
+              .build();
     try {
       cluster.waitActive();
 
@@ -194,7 +199,7 @@ public class TestGetBlocks {
       FSDataOutputStream out = fs.create(new Path("/tmp.txt"),
           REPLICATION_FACTOR);
       byte[] data = new byte[1024];
-      long fileLen = 2 * DEFAULT_BLOCK_SIZE;
+      long fileLen = 12 * DEFAULT_BLOCK_SIZE + 1;
       long bytesToWrite = fileLen;
       while (bytesToWrite > 0) {
         r.nextBytes(data);
@@ -214,7 +219,8 @@ public class TestGetBlocks {
             CONF);
         locatedBlocks = dfsclient.getNamenode()
             .getBlockLocations("/tmp.txt", 0, fileLen).getLocatedBlocks();
-        assertEquals(2, locatedBlocks.size());
+        assertEquals(13, locatedBlocks.size());
+
         notWritten = false;
         for (int i = 0; i < 2; i++) {
           dataNodes = locatedBlocks.get(i).getLocations();
@@ -238,7 +244,7 @@ public class TestGetBlocks {
       // get blocks of size fileLen from dataNodes[0]
       BlockWithLocations[] locs;
       locs = namenode.getBlocks(dataNodes[0], fileLen).getBlocks();
-      assertEquals(locs.length, 2);
+      assertEquals(locs.length, 12);
       assertEquals(locs[0].getStorageIDs().length, 2);
       assertEquals(locs[1].getStorageIDs().length, 2);
 
