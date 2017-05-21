@@ -6,6 +6,9 @@ Release 2.6.0 - 2014-11-18
 
   NEW FEATURES
 
+    HDFS-9412. getBlocks occupies FSLock and takes too long to complete.
+    Contributed by He Tianyi. Backport HDFS-11855 by Vinitha Reddy Gankidi.
+
     HDFS-6584. Support archival storage.  (See breakdown of tasks below for
     features and contributors)
 
