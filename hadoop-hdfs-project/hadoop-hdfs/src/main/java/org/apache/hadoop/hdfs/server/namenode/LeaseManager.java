@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.util.Time.monotonicNow;
 import static org.apache.hadoop.util.Time.now;
 
 import java.io.IOException;
@@ -428,7 +429,7 @@ public class LeaseManager {
             }
           }
   
-          Thread.sleep(HdfsServerConstants.NAMENODE_LEASE_RECHECK_INTERVAL);
+          Thread.sleep(fsnamesystem.getLeaseRecheckIntervalMs());
         } catch(InterruptedException ie) {
           if (LOG.isDebugEnabled()) {
             LOG.debug(name + " is interrupted", ie);
@@ -473,11 +474,17 @@ public class LeaseManager {
       leaseToCheck = sortedLeases.first();
     } catch(NoSuchElementException e) {}
 
+    long start = monotonicNow();
+
     while(leaseToCheck != null) {
       if (!leaseToCheck.expiredHardLimit()) {
         break;
       }
 
+
+    //while(!sortedLeases.isEmpty() && sortedLeases.peek().expiredHardLimit()
+    //  && !isMaxLockHoldToReleaseLease(start)) {
+    //  Lease leaseToCheck = sortedLeases.peek();
       LOG.info(leaseToCheck + " has expired hard limit");
 
       final List<String> removing = new ArrayList<String>();
@@ -507,11 +514,17 @@ public class LeaseManager {
               + leaseToCheck, e);
           removing.add(p);
         }
+        if (isMaxLockHoldToReleaseLease(start)) {
+          LOG.debug("Breaking out of checkLeases after " +
+              fsnamesystem.getMaxLockHoldToReleaseLeaseMs() + "ms.");
+          break;
+        }
       }
 
       for(String p : removing) {
         removeLease(leaseToCheck, p);
       }
+
       leaseToCheck = sortedLeases.higher(leaseToCheck);
     }
 
@@ -522,6 +535,13 @@ public class LeaseManager {
       }
     } catch(NoSuchElementException e) {}
     return needSync;
+  }
+
+
+  /** @return true if max lock hold is reached */
+  private boolean isMaxLockHoldToReleaseLease(long start) {
+    return monotonicNow() - start >
+        fsnamesystem.getMaxLockHoldToReleaseLeaseMs();
   }
 
   @Override
