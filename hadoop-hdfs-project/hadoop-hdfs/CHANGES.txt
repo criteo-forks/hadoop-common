@@ -1,5 +1,9 @@
 Hadoop HDFS Change Log
 
+Criteo Release
+
+   HDFS-8865. Improve quota initialization performance. Contributed by Kihwal Lee.
+
 Release 2.6.0 - 2014-11-18
 
   INCOMPATIBLE CHANGES
