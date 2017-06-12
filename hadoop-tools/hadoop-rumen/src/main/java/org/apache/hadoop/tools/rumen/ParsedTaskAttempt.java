@@ -109,7 +109,7 @@ public class ParsedTaskAttempt extends LoggedTaskAttempt {
   }
 
   /** Dump the extra info of ParsedTaskAttempt */
-  void dumpParsedTaskAttempt() {
+  public void dumpParsedTaskAttempt() {
     LOG.info("ParsedTaskAttempt details:" + obtainCounters()
         + ";DiagnosticInfo=" + obtainDiagnosticInfo() + "\n"
         + obtainTrackerName() + ";" + obtainHttpPort() + ";"
