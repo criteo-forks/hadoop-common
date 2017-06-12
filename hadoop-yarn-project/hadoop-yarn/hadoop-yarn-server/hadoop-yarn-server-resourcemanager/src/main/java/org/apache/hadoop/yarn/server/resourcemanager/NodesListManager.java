@@ -103,10 +103,15 @@ public class NodesListManager extends AbstractService implements
         YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH) + " out=" +
         conf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH, 
             YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH));
-    for (String include : hostsReader.getHosts()) {
+
+    Set<String> hostsList = new HashSet<String>();
+    Set<String> excludeList = new HashSet<String>();
+    hostsReader.getHostDetails(hostsList, excludeList);
+
+    for (String include : hostsList) {
       LOG.debug("include: " + include);
     }
-    for (String exclude : hostsReader.getExcludedHosts()) {
+    for (String exclude : excludeList) {
       LOG.debug("exclude: " + exclude);
     }
   }
@@ -125,25 +130,17 @@ public class NodesListManager extends AbstractService implements
 
   private void refreshHostsReader(Configuration yarnConf) throws IOException,
       YarnException {
-    synchronized (hostsReader) {
-      if (null == yarnConf) {
-        yarnConf = new YarnConfiguration();
-      }
-      includesFile =
-          yarnConf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
-              YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH);
-      excludesFile =
-          yarnConf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
-              YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
-      hostsReader.updateFileNames(includesFile, excludesFile);
-      hostsReader.refresh(
-          includesFile.isEmpty() ? null : this.rmContext
-              .getConfigurationProvider().getConfigurationInputStream(
-                  this.conf, includesFile), excludesFile.isEmpty() ? null
-              : this.rmContext.getConfigurationProvider()
-                  .getConfigurationInputStream(this.conf, excludesFile));
-      printConfiguredHosts();
+    if (null == yarnConf) {
+      yarnConf = new YarnConfiguration();
     }
+    includesFile =
+        yarnConf.get(YarnConfiguration.RM_NODES_INCLUDE_FILE_PATH,
+            YarnConfiguration.DEFAULT_RM_NODES_INCLUDE_FILE_PATH);
+    excludesFile =
+        yarnConf.get(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
+            YarnConfiguration.DEFAULT_RM_NODES_EXCLUDE_FILE_PATH);
+    hostsReader.refresh(includesFile, excludesFile);
+    printConfiguredHosts();
   }
 
   private void setDecomissionedNMs() {
@@ -159,14 +156,14 @@ public class NodesListManager extends AbstractService implements
   }
 
   public boolean isValidNode(String hostName) {
-    synchronized (hostsReader) {
-      Set<String> hostsList = hostsReader.getHosts();
-      Set<String> excludeList = hostsReader.getExcludedHosts();
-      String ip = NetUtils.normalizeHostName(hostName);
-      return (hostsList.isEmpty() || hostsList.contains(hostName) || hostsList
-          .contains(ip))
-          && !(excludeList.contains(hostName) || excludeList.contains(ip));
-    }
+    String ip = NetUtils.normalizeHostName(hostName);
+    Set<String> hostsList = new HashSet<String>();
+    Set<String> excludeList = new HashSet<String>();
+    hostsReader.getHostDetails(hostsList, excludeList);
+
+    return (hostsList.isEmpty() || hostsList.contains(hostName) || hostsList
+        .contains(ip))
+        && !(excludeList.contains(hostName) || excludeList.contains(ip));
   }
   
   /**
