@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSOutputStream;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -232,7 +233,7 @@ public class TestNamenodeCapacityReport {
         DataNode dn = datanodes.get(i);
         DatanodeDescriptor dnd = dnm.getDatanode(dn.getDatanodeId());
         dn.shutdown();
-        dnd.setLastUpdate(0L);
+        DFSTestUtil.setDatanodeDead(dnd);
         BlockManagerTestUtil.checkHeartbeat(namesystem.getBlockManager());
         //Admin operations on dead nodes won't impact nodesInService metrics.
         startDecommissionOrMaintenance(dnm, dnd, (i % 2 == 0));
@@ -322,7 +323,7 @@ public class TestNamenodeCapacityReport {
         dn.shutdown();
         // force it to appear dead so live count decreases
         DatanodeDescriptor dnDesc = dnm.getDatanode(dn.getDatanodeId());
-        dnDesc.setLastUpdate(0L);
+        DFSTestUtil.setDatanodeDead(dnDesc);
         BlockManagerTestUtil.checkHeartbeat(namesystem.getBlockManager());
         assertEquals(nodes-1-i, namesystem.getNumLiveDataNodes());
         // first few nodes are already out of service

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import static org.apache.hadoop.util.Time.now;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.util.*;
 
@@ -928,7 +928,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       final List<StorageType> excessTypes,
       Map<String, List<DatanodeStorageInfo>> rackMap) {
     long oldestHeartbeat =
-      now() - heartbeatInterval * tolerateHeartbeatMultiplier;
+      monotonicNow() - heartbeatInterval * tolerateHeartbeatMultiplier;
     DatanodeStorageInfo oldestHeartbeatStorage = null;
     long minSpace = Long.MAX_VALUE;
     DatanodeStorageInfo minSpaceStorage = null;
@@ -943,8 +943,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
 
       final DatanodeDescriptor node = storage.getDatanodeDescriptor();
       long free = node.getRemaining();
-      long lastHeartbeat = node.getLastUpdate();
-      if(lastHeartbeat < oldestHeartbeat) {
+      long lastHeartbeat = node.getLastUpdateMonotonic();
+      if (lastHeartbeat < oldestHeartbeat) {
         oldestHeartbeat = lastHeartbeat;
         oldestHeartbeatStorage = storage;
       }

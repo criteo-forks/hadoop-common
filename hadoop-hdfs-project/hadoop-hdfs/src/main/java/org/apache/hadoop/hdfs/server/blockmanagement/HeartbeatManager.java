@@ -411,7 +411,7 @@ class HeartbeatManager implements DatanodeStatistics {
       while(namesystem.isRunning()) {
         restartHeartbeatStopWatch();
         try {
-          final long now = Time.now();
+          final long now = Time.monotonicNow();
           if (lastHeartbeatCheck + heartbeatRecheckInterval < now) {
             heartbeatCheck();
             lastHeartbeatCheck = now;
