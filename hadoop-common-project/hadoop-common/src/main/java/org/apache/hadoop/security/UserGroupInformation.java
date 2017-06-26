@@ -17,10 +17,8 @@
  */
 package org.apache.hadoop.security;
 
-import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN;
-import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT;
+import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
 import java.io.File;
 import java.io.IOException;
@@ -240,11 +238,12 @@ public class UserGroupInformation {
   private static AuthenticationMethod authenticationMethod;
   /** Server-side groups fetching service */
   private static Groups groups;
-  /** Min time (in seconds) before relogin for Kerberos */
-  private static long kerberosMinSecondsBeforeRelogin;
   /** The configuration to use */
   private static Configuration conf;
 
+  
+  /** Leave 10 minutes between relogin attempts. */
+  private static final long MIN_TIME_BEFORE_RELOGIN = 10 * 60 * 1000L;
   
   /**Environment variable pointing to the token cache file*/
   public static final String HADOOP_TOKEN_FILE_LOCATION = 
@@ -278,16 +277,6 @@ public class UserGroupInformation {
         throw new RuntimeException(
             "Problem with Kerberos auth_to_local name configuration", ioe);
       }
-    }
-    try {
-        kerberosMinSecondsBeforeRelogin = 1000L * conf.getLong(
-                HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN,
-                HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT);
-    }
-    catch(NumberFormatException nfe) {
-        throw new IllegalArgumentException("Invalid attribute value for " +
-                HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN + " of " +
-                conf.get(HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN));
     }
     // If we haven't set up testing groups, use the configuration to find it
     if (!(groups instanceof TestingGroups)) {
@@ -932,7 +921,7 @@ public class UserGroupInformation {
                   return;
                 }
                 nextRefresh = Math.max(getRefreshTime(tgt),
-                                       now + kerberosMinSecondsBeforeRelogin);
+                                       now + MIN_TIME_BEFORE_RELOGIN);
               } catch (InterruptedException ie) {
                 LOG.warn("Terminating renewal thread");
                 return;
@@ -1177,10 +1166,10 @@ public class UserGroupInformation {
   }
 
   private boolean hasSufficientTimeElapsed(long now) {
-    if (now - user.getLastLogin() < kerberosMinSecondsBeforeRelogin ) {
+    if (now - user.getLastLogin() < MIN_TIME_BEFORE_RELOGIN ) {
       LOG.warn("Not attempting to re-login since the last re-login was " +
-          "attempted less than " + (kerberosMinSecondsBeforeRelogin/1000) +
-          " seconds before.");
+          "attempted less than " + (MIN_TIME_BEFORE_RELOGIN/1000) + " seconds"+
+          " before.");
       return false;
     }
     return true;

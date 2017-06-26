@@ -374,12 +374,5 @@ public class CommonConfigurationKeysPublic {
   // CLOUDERA-BUILD: enable the shell warnings by default.
   public static final boolean HADOOP_SHELL_MISSING_DEFAULT_FS_WARNING_DEFAULT =
       true;
-
-  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
-  public static final String HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN =
-          "hadoop.kerberos.min.seconds.before.relogin";
-  /** Default value for HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN */
-  public static final int HADOOP_KERBEROS_MIN_SECONDS_BEFORE_RELOGIN_DEFAULT =
-          60;
 }
 

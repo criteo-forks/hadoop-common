@@ -2666,9 +2666,6 @@ Release 2.0.3-alpha - 2013-02-06
 
   BUG FIXES
 
-    HADOOP-7930. Kerberos relogin interval in UserGroupInformation
-    should be configurable (Robert Kanter via harsh)
-
     HADOOP-9041. FsUrlStreamHandlerFactory could cause an infinite loop in
     FileSystem initialization. (Yanbo Liang and Radim Kolar via llu)
 
