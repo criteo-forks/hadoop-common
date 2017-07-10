@@ -1204,9 +1204,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       assert safeMode != null && !isPopulatingReplQueues();
       StartupProgress prog = NameNode.getStartupProgress();
       prog.beginPhase(Phase.SAFEMODE);
+      long completeBlocksTotal = getCompleteBlocksTotal();
       prog.setTotal(Phase.SAFEMODE, STEP_AWAITING_REPORTED_BLOCKS,
-        getCompleteBlocksTotal());
-      setBlockTotal();
+          completeBlocksTotal);
+      setBlockTotal(completeBlocksTotal);
       blockManager.activate(conf);
     } finally {
       writeUnlock();
@@ -6437,12 +6438,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Set the total number of blocks in the system. 
    */
-  public void setBlockTotal() {
+  public void setBlockTotal(long completeBlocksTotal) {
     // safeMode is volatile, and may be set to null at any time
     SafeModeInfo safeMode = this.safeMode;
     if (safeMode == null)
       return;
-    safeMode.setBlockTotal((int)getCompleteBlocksTotal());
+    safeMode.setBlockTotal((int) completeBlocksTotal);
   }
 
   /**
@@ -6474,13 +6475,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   /**
    * Get the total number of COMPLETE blocks in the system.
    * For safe mode only complete blocks are counted.
+   * This is invoked only during NN startup and checkpointing.
    */
-  private long getCompleteBlocksTotal() {
+  public long getCompleteBlocksTotal() {
     // Calculate number of blocks under construction
     long numUCBlocks = 0;
     readLock();
-    numUCBlocks = leaseManager.getNumUnderConstructionBlocks();
     try {
+      numUCBlocks = leaseManager.getNumUnderConstructionBlocks();
       return getBlocksTotal() - numUCBlocks;
     } finally {
       readUnlock();
