@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.yarn.sls.scheduler;
 
+import org.apache.hadoop.yarn.util.UTCClock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -30,7 +31,7 @@ public class TestTaskRunner {
 
   @Before
   public void setUp() {
-    runner = new TaskRunner();
+    runner = new TaskRunner(new UTCClock());
     runner.setQueueSize(5);
   }
 
@@ -44,6 +45,7 @@ public class TestTaskRunner {
     public static boolean first;
 
     public SingleTask(long startTime) {
+      super(new UTCClock());
       super.init(startTime);
     }
 
@@ -81,6 +83,7 @@ public class TestTaskRunner {
     public static boolean last;
 
     public DualTask(long startTime, long endTime, long interval) {
+      super(new UTCClock());
       super.init(startTime, endTime, interval);
     }
 
@@ -123,6 +126,7 @@ public class TestTaskRunner {
     public static boolean last;
 
     public TriTask(long startTime, long endTime, long interval) {
+      super(new UTCClock());
       super.init(startTime, endTime, interval);
     }
 
@@ -169,6 +173,7 @@ public class TestTaskRunner {
     public static boolean last;
 
     public MultiTask(long startTime, long endTime, long interval) {
+      super(new UTCClock());
       super.init(startTime, endTime, interval);
     }
 
@@ -211,6 +216,7 @@ public class TestTaskRunner {
     public static boolean first;
 
     public PreStartTask(long startTime) {
+      super(new UTCClock());
       super.init(startTime);
     }
 

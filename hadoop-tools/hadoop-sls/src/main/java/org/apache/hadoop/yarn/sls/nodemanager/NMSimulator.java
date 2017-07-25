@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -50,6 +51,7 @@ import org.apache.hadoop.yarn.server.api.records.NodeStatus;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
+import org.apache.hadoop.yarn.util.Clock;
 import org.apache.hadoop.yarn.util.Records;
 import org.apache.log4j.Logger;
 
@@ -73,8 +75,12 @@ public class NMSimulator extends TaskRunner.Task {
   // resource manager
   private ResourceManager rm;
   // heart beat response id
-  private int RESPONSE_ID = 1;
+  private AtomicInteger RESPONSE_ID = new AtomicInteger(1);
   private final static Logger LOG = Logger.getLogger(NMSimulator.class);
+
+  public NMSimulator(Clock clock){
+    super(clock);
+  }
   
   public void init(String nodeIdStr, int memory, int cores,
           int dispatchTime, int heartBeatInterval, ResourceManager rm)
@@ -134,7 +140,7 @@ public class NMSimulator extends TaskRunner.Task {
     ns.setContainersStatuses(generateContainerStatusList());
     ns.setNodeId(node.getNodeID());
     ns.setKeepAliveApplications(new ArrayList<ApplicationId>());
-    ns.setResponseId(RESPONSE_ID ++);
+    ns.setResponseId(RESPONSE_ID.getAndIncrement());
     ns.setNodeHealthStatus(NodeHealthStatus.newInstance(true, "", 0));
     beatRequest.setNodeStatus(ns);
     NodeHeartbeatResponse beatResponse =
@@ -231,8 +237,8 @@ public class NMSimulator extends TaskRunner.Task {
             "container ({1}).", node.getNodeID(), container.getId()));
     if (lifeTimeMS != -1) {
       // normal container
-      ContainerSimulator cs = new ContainerSimulator(container.getId(),
-              container.getResource(), lifeTimeMS + System.currentTimeMillis(),
+      ContainerSimulator cs = new ContainerSimulator(clock, container.getId(),
+              container.getResource(), lifeTimeMS + clock.getTime(),
               lifeTimeMS);
       containerQueue.add(cs);
       runningContainers.put(cs.getId(), cs);
