@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -643,6 +644,21 @@ public class ContractTestUtils extends Assert {
   /**
    * Assert that a file exists and whose {@link FileStatus} entry
    * declares that this is a file and not a symlink or directory.
+   *
+   * @param fileContext filesystem to resolve path against
+   * @param filename    name of the file
+   * @throws IOException IO problems during file operations
+   */
+  public static void assertIsFile(FileContext fileContext, Path filename)
+      throws IOException {
+    assertPathExists(fileContext, "Expected file", filename);
+    FileStatus status = fileContext.getFileStatus(filename);
+    assertIsFile(filename, status);
+  }
+
+  /**
+   * Assert that a file exists and whose {@link FileStatus} entry
+   * declares that this is a file and not a symlink or directory.
    * @param filename name of the file
    * @param status file status
    */
@@ -691,7 +707,26 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Assert that a path does not exist
+   * Assert that a path exists -but make no assertions as to the
+   * type of that entry.
+   *
+   * @param fileContext fileContext to examine
+   * @param message     message to include in the assertion failure message
+   * @param path        path in the filesystem
+   * @throws FileNotFoundException raised if the path is missing
+   * @throws IOException           IO problems
+   */
+  public static void assertPathExists(FileContext fileContext, String message,
+      Path path) throws IOException {
+    if (!fileContext.util().exists(path)) {
+      //failure, report it
+      throw new FileNotFoundException(
+          message + ": not found " + path + " in " + path.getParent());
+    }
+  }
+
+  /**
+   * Assert that a path does not exist.
    *
    * @param fileSystem filesystem to examine
    * @param message message to include in the assertion failure message
@@ -711,7 +746,26 @@ public class ContractTestUtils extends Assert {
   }
 
   /**
-   * Assert that a FileSystem.listStatus on a dir finds the subdir/child entry
+   * Assert that a path does not exist.
+   *
+   * @param fileContext fileContext to examine
+   * @param message     message to include in the assertion failure message
+   * @param path        path in the filesystem
+   * @throws IOException IO problems
+   */
+  public static void assertPathDoesNotExist(FileContext fileContext,
+      String message, Path path) throws IOException {
+    try {
+      FileStatus status = fileContext.getFileStatus(path);
+      fail(message + ": unexpectedly found " + path + " as  " + status);
+    } catch (FileNotFoundException expected) {
+      //this is expected
+
+    }
+  }
+
+  /**
+   * Assert that a FileSystem.listStatus on a dir finds the subdir/child entry.
    * @param fs filesystem
    * @param dir directory to scan
    * @param subdir full path to look for
