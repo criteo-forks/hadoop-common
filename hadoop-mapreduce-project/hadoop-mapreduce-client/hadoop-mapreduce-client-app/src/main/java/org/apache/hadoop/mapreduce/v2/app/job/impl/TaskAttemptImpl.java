@@ -206,6 +206,7 @@ public abstract class TaskAttemptImpl implements
   private static final EnumSet<TaskAttemptEventType>
     FAILED_KILLED_STATE_IGNORED_EVENTS = EnumSet.of(
       TaskAttemptEventType.TA_KILL,
+      TaskAttemptEventType.TA_LOST_NM,
       TaskAttemptEventType.TA_ASSIGNED,
       TaskAttemptEventType.TA_CONTAINER_COMPLETED,
       TaskAttemptEventType.TA_UPDATE,
@@ -279,6 +280,9 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_KILL, CLEANUP_CONTAINER_TRANSITION)
      .addTransition(TaskAttemptStateInternal.ASSIGNED,
+         TaskAttemptStateInternal.FAILED,
+         TaskAttemptEventType.TA_LOST_NM, FINALIZE_FAILED_TRANSITION)
+     .addTransition(TaskAttemptStateInternal.ASSIGNED,
          TaskAttemptStateInternal.FAIL_FINISHING_CONTAINER,
          TaskAttemptEventType.TA_FAILMSG, FAILED_FINISHING_TRANSITION)
      .addTransition(TaskAttemptStateInternal.ASSIGNED,
@@ -308,6 +312,9 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.RUNNING,
          TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_FAILMSG_BY_CLIENT, CLEANUP_CONTAINER_TRANSITION)
+     .addTransition(TaskAttemptStateInternal.RUNNING,
+         TaskAttemptStateInternal.FAILED,
+         TaskAttemptEventType.TA_LOST_NM, FINALIZE_FAILED_TRANSITION)
       //for handling container exit without sending the done or fail msg
      .addTransition(TaskAttemptStateInternal.RUNNING,
          TaskAttemptStateInternal.FAILED,
@@ -355,6 +362,11 @@ public abstract class TaskAttemptImpl implements
          EnumSet.of(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
              TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP),
          TaskAttemptEventType.TA_KILL,
+         new KilledAfterSucceededFinishingTransition())
+     .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
+         EnumSet.of(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+             TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP),
+         TaskAttemptEventType.TA_LOST_NM,
          new KilledAfterSucceededFinishingTransition())
      // The attempt stays in finishing state for too long
      // Let us clean up the container
@@ -405,6 +417,7 @@ public abstract class TaskAttemptImpl implements
     .addTransition(TaskAttemptStateInternal.FAIL_FINISHING_CONTAINER,
         TaskAttemptStateInternal.FAIL_FINISHING_CONTAINER,
         EnumSet.of(TaskAttemptEventType.TA_KILL,
+            TaskAttemptEventType.TA_LOST_NM,
             TaskAttemptEventType.TA_UPDATE,
             TaskAttemptEventType.TA_DONE,
             TaskAttemptEventType.TA_COMMIT_PENDING,
@@ -426,6 +439,10 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_KILL,
          CLEANUP_CONTAINER_TRANSITION)
+     .addTransition(TaskAttemptStateInternal.COMMIT_PENDING,
+         TaskAttemptStateInternal.FAILED,
+         TaskAttemptEventType.TA_LOST_NM,
+         FINALIZE_FAILED_TRANSITION)
      // if container killed by AM shutting down
      .addTransition(TaskAttemptStateInternal.COMMIT_PENDING,
          TaskAttemptStateInternal.KILLED,
@@ -468,6 +485,7 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
          TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
          EnumSet.of(TaskAttemptEventType.TA_KILL,
+             TaskAttemptEventType.TA_LOST_NM,
              TaskAttemptEventType.TA_FAILMSG,
              TaskAttemptEventType.TA_FAILMSG_BY_CLIENT,
              TaskAttemptEventType.TA_TIMED_OUT,
@@ -477,6 +495,9 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP,
          TaskAttemptStateInternal.FAIL_TASK_CLEANUP,
          TaskAttemptEventType.TA_CONTAINER_CLEANED, new TaskCleanupTransition())
+     .addTransition(TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP,
+         TaskAttemptStateInternal.FAILED,
+         TaskAttemptEventType.TA_LOST_NM, FINALIZE_FAILED_TRANSITION)
      .addTransition(TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP,
          TaskAttemptStateInternal.FAIL_CONTAINER_CLEANUP,
          TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
@@ -509,6 +530,7 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP,
          TaskAttemptStateInternal.KILL_CONTAINER_CLEANUP,
          EnumSet.of(TaskAttemptEventType.TA_KILL,
+             TaskAttemptEventType.TA_LOST_NM,
              TaskAttemptEventType.TA_CONTAINER_COMPLETED,
              TaskAttemptEventType.TA_UPDATE,
              TaskAttemptEventType.TA_COMMIT_PENDING,
@@ -532,6 +554,7 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.FAIL_TASK_CLEANUP,
          TaskAttemptStateInternal.FAIL_TASK_CLEANUP,
          EnumSet.of(TaskAttemptEventType.TA_KILL,
+             TaskAttemptEventType.TA_LOST_NM,
              TaskAttemptEventType.TA_CONTAINER_COMPLETED,
              TaskAttemptEventType.TA_UPDATE,
              TaskAttemptEventType.TA_COMMIT_PENDING,
@@ -555,6 +578,7 @@ public abstract class TaskAttemptImpl implements
      .addTransition(TaskAttemptStateInternal.KILL_TASK_CLEANUP,
          TaskAttemptStateInternal.KILL_TASK_CLEANUP,
          EnumSet.of(TaskAttemptEventType.TA_KILL,
+             TaskAttemptEventType.TA_LOST_NM,
              TaskAttemptEventType.TA_CONTAINER_COMPLETED,
              TaskAttemptEventType.TA_UPDATE,
              TaskAttemptEventType.TA_COMMIT_PENDING,
@@ -574,6 +598,10 @@ public abstract class TaskAttemptImpl implements
       .addTransition(TaskAttemptStateInternal.SUCCEEDED,
           EnumSet.of(TaskAttemptStateInternal.SUCCEEDED, TaskAttemptStateInternal.KILLED),
           TaskAttemptEventType.TA_KILL,
+          new KilledAfterSuccessTransition())
+      .addTransition(TaskAttemptStateInternal.SUCCEEDED,
+          EnumSet.of(TaskAttemptStateInternal.SUCCEEDED, TaskAttemptStateInternal.KILLED),
+          TaskAttemptEventType.TA_LOST_NM,
           new KilledAfterSuccessTransition())
      .addTransition(
          TaskAttemptStateInternal.SUCCEEDED, TaskAttemptStateInternal.SUCCEEDED,
@@ -1832,6 +1860,10 @@ public abstract class TaskAttemptImpl implements
     public void transition(TaskAttemptImpl taskAttempt,
         TaskAttemptEvent event) {
       finalizeProgress(taskAttempt);
+      if (event instanceof TaskAttemptKillEvent && event.getType() == TaskAttemptEventType.TA_LOST_NM) {
+        taskAttempt.addDiagnosticInfo(
+           ((TaskAttemptKillEvent) event).getMessage());
+      }
       sendContainerCompleted(taskAttempt);
       super.transition(taskAttempt, event);
     }
@@ -1981,7 +2013,9 @@ public abstract class TaskAttemptImpl implements
         TaskAttemptEvent event) {
       taskAttempt.appContext.getTaskAttemptFinishingMonitor().unregister(
           taskAttempt.attemptId);
-      sendContainerCleanup(taskAttempt, event);
+      if (event.getType() != TaskAttemptEventType.TA_LOST_NM) {
+        sendContainerCleanup(taskAttempt, event);
+      }
       if(taskAttempt.getID().getTaskId().getTaskType() == TaskType.REDUCE) {
         // after a reduce task has succeeded, its outputs are in safe in HDFS.
         // logically such a task should not be killed. we only come here when

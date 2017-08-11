@@ -26,9 +26,14 @@ public class TaskAttemptKillEvent extends TaskAttemptEvent {
   private final String message;
 
   public TaskAttemptKillEvent(TaskAttemptId attemptID,
-      String message) {
-    super(attemptID, TaskAttemptEventType.TA_KILL);
+      String message, boolean isFromLostNode) {
+    super(attemptID, isFromLostNode ? TaskAttemptEventType.TA_LOST_NM : TaskAttemptEventType.TA_KILL);
     this.message = message;
+  }
+
+  public TaskAttemptKillEvent(TaskAttemptId attemptID,
+      String message) {
+    this(attemptID, message, false);
   }
 
   public String getMessage() {

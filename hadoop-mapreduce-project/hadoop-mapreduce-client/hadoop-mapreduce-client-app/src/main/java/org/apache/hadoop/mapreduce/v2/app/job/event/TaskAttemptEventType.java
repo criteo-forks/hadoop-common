@@ -22,6 +22,8 @@ package org.apache.hadoop.mapreduce.v2.app.job.event;
  * Event types handled by TaskAttempt.
  */
 public enum TaskAttemptEventType {
+  //LOST NODEMANAGER
+  TA_LOST_NM,
 
   //Producer:Task
   TA_SCHEDULE,

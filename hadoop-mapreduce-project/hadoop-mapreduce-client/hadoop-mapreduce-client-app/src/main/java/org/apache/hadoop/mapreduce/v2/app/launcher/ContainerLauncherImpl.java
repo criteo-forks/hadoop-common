@@ -19,17 +19,13 @@
 package org.apache.hadoop.mapreduce.v2.app.launcher;
 
 import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.commons.logging.Log;
@@ -109,6 +105,7 @@ public class ContainerLauncherImpl extends AbstractService implements
     private TaskAttemptId taskAttemptID;
     private ContainerId containerID;
     final private String containerMgrAddress;
+    private AtomicBoolean mustBeCompleted = new AtomicBoolean(false);
     
     public Container(TaskAttemptId taId, ContainerId containerID,
         String containerMgrAddress) {
@@ -190,7 +187,20 @@ public class ContainerLauncherImpl extends AbstractService implements
         }
       }
     }
-    
+
+    @SuppressWarnings("unchecked")
+    private void sendTaskAttemptDiagnosticsUpdate(Throwable t){
+      // ignore the cleanup failure
+      String message = "cleanup failed for container "
+              + containerID + " : "
+              + StringUtils.stringifyException(t);
+      context.getEventHandler()
+              .handle(
+                      new TaskAttemptDiagnosticsUpdateEvent(taskAttemptID,
+                              message));
+      LOG.warn(message);
+    }
+
     @SuppressWarnings("unchecked")
     public synchronized void kill() {
 
@@ -199,36 +209,53 @@ public class ContainerLauncherImpl extends AbstractService implements
       } else if (!isCompletelyDone()) {
         LOG.info("KILLING " + taskAttemptID);
 
-        ContainerManagementProtocolProxyData proxy = null;
-        try {
-          proxy = getCMProxy(this.containerMgrAddress, this.containerID);
 
-          // kill the remote container if already launched
-          List<ContainerId> ids = new ArrayList<ContainerId>();
-          ids.add(this.containerID);
-          StopContainersRequest request = StopContainersRequest.newInstance(ids);
-          StopContainersResponse response =
-              proxy.getContainerManagementProtocol().stopContainers(request);
-          if (response.getFailedRequests() != null
-              && response.getFailedRequests().containsKey(this.containerID)) {
-            throw response.getFailedRequests().get(this.containerID)
-              .deSerialize();
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        Future future = executorService.submit(new Runnable() {
+          @Override
+          public void run() {
+            ContainerManagementProtocolProxyData proxy = null;
+            try {
+              proxy = getCMProxy(containerMgrAddress, containerID);
+
+              // kill the remote container if already launched
+              List<ContainerId> ids = new ArrayList<ContainerId>();
+              ids.add(containerID);
+              StopContainersRequest request = StopContainersRequest.newInstance(ids);
+              StopContainersResponse response =
+                      proxy.getContainerManagementProtocol().stopContainers(request);
+              if (response.getFailedRequests() != null
+                      && response.getFailedRequests().containsKey(containerID)) {
+                throw response.getFailedRequests().get(containerID)
+                        .deSerialize();
+              }
+            } catch (Throwable t) {
+              if (!mustBeCompleted.get()) {
+                sendTaskAttemptDiagnosticsUpdate(t);
+              }
+            }
+            finally {
+              if (proxy != null) {
+                cmProxy.mayBeCloseProxy(proxy);
+              }
+            }
           }
-        } catch (Throwable t) {
-          // ignore the cleanup failure
-          String message = "cleanup failed for container "
-              + this.containerID + " : "
-              + StringUtils.stringifyException(t);
-          context.getEventHandler()
-              .handle(
-                  new TaskAttemptDiagnosticsUpdateEvent(this.taskAttemptID,
-                      message));
-          LOG.warn(message);
-        } finally {
-          if (proxy != null) {
-            cmProxy.mayBeCloseProxy(proxy);
+        });
+
+        while(!future.isDone()){
+          try {
+            Thread.sleep(1);
+          } catch (InterruptedException e) {
+            sendTaskAttemptDiagnosticsUpdate(e);
+          }
+
+          if (mustBeCompleted.get()) {
+            LOG.info("Container " + containerID +" is completed : cancel cleanup");
+            future.cancel(true);
+            return;
           }
         }
+
         this.state = ContainerState.DONE;
       }
       // after killing, send killed event to task attempt
@@ -378,6 +405,7 @@ public class ContainerLauncherImpl extends AbstractService implements
         break;
 
       case CONTAINER_COMPLETED:
+        c.mustBeCompleted.set(true);
         c.done();
         break;
 

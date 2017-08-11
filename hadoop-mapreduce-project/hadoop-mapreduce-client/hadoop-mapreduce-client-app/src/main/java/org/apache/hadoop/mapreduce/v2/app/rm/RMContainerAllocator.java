@@ -844,7 +844,7 @@ public class RMContainerAllocator extends RMContainerRequestor
                 + taskAttemptNodeId);
             eventHandler.handle(new TaskAttemptKillEvent(tid,
                 "TaskAttempt killed because it ran on unusable node"
-                    + taskAttemptNodeId));
+                    + taskAttemptNodeId, true));
           }
         }
       }
