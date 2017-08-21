@@ -128,6 +128,9 @@ public class DFSAdmin extends FsShell {
 
     @Override
     public void run(PathData pathData) throws IOException {
+      if (!(pathData.fs instanceof DistributedFileSystem)) {
+        pathData = PathData.resolveFsPath(pathData, getConf());
+      }
       FileSystem fs = pathData.fs;
       if (!(fs instanceof DistributedFileSystem)) {
         throw new IllegalArgumentException("FileSystem " + fs.getUri()

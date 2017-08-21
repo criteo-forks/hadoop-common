@@ -335,6 +335,29 @@ public class PathData implements Comparable<PathData> {
   protected enum PathType { HAS_SCHEME, SCHEMELESS_ABSOLUTE, RELATIVE };
   
   /**
+   * Resolves an actual file system for the given {@link PathData}
+   * through any symlinks or mount points.
+   * @param src {@link PathData} to be resolved
+   * @param conf the hadoop configuration
+   * @return new {@link PathData} if a fs changed, or the same object otherwise
+   * @throws FileNotFoundException when the path does not exist
+   * @throws IOException from #{@link FileSystem} implementations
+   */
+  public static PathData resolveFsPath(PathData src, Configuration conf)
+      throws IOException {
+    Path resolvedPath = src.fs.resolvePath(src.path);
+    if (resolvedPath.equals(src.path)) {
+      return src;
+    }
+    FileSystem resolvedFs = resolvedPath.getFileSystem(conf);
+    if (resolvedFs.equals(src.fs)) {
+      return src;
+    }
+    // FileStatus contains an unresolved path and will be replaced too
+    return new PathData(resolvedFs, resolvedPath.toString());
+  }
+
+  /**
    * Expand the given path as a glob pattern.  Non-existent paths do not
    * throw an exception because creation commands like touch and mkdir need
    * to create them.  The "stat" field will be null if the path does not
