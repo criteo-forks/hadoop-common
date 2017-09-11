@@ -670,6 +670,15 @@ for ldap providers in the same way as above does.
 </property>
 
 <property>
+  <name>fs.viewfs.rename.strategy</name>
+  <value>SAME_MOUNTPOINT</value>
+  <description>Allowed rename strategy to rename between multiple mountpoints.
+    Allowed values are SAME_MOUNTPOINT,SAME_TARGET_URI_ACROSS_MOUNTPOINT and
+    SAME_FILESYSTEM_ACROSS_MOUNTPOINT.
+  </description>
+</property>
+
+<property>
   <name>fs.ftp.host</name>
   <value>0.0.0.0</value>
   <description>FTP filesystem connects to this server</description>
