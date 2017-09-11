@@ -2,6 +2,9 @@ Hadoop Change Log
 
 Criteo Release
 
+  HADOOP-9631. ViewFs should use underlying FileSystem's server side defaults.
+  (Lohit Vijayarenu and Erik Krogen via zhz)
+
   HADOOP-12054 RPC client should not retry for InvalidToken exceptions
 
   HADOOP-11628. SPNEGO auth does not work with CNAMEs in JDK8.
