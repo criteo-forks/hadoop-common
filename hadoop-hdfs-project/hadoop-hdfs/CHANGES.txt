@@ -6,6 +6,9 @@ Release 2.6.0 - 2014-11-18
 
   NEW FEATURES
 
+    HDFS-9412. getBlocks occupies FSLock and takes too long to complete.
+    Contributed by He Tianyi. Backport HDFS-11855 by Vinitha Reddy Gankidi.
+
     HDFS-6584. Support archival storage.  (See breakdown of tasks below for
     features and contributors)
 
@@ -13,6 +16,12 @@ Release 2.6.0 - 2014-11-18
     tasks below for features and contributors).
 
   IMPROVEMENTS
+
+    HDFS-8824. Do not use small blocks for balancing the cluster.  (szetszwo)
+
+    HDFS-11384. Balancer disperses getBlocks calls to avoid NameNode's rpc queue
+    saturation. (shv)
+
     HDFS-9106. Transfer failure during pipeline recovery causes permanent
     write failures (kihwal)
 
