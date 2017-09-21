@@ -73,6 +73,7 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.server.balancer.Balancer.Cli;
 import org.apache.hadoop.hdfs.server.balancer.Balancer.Parameters;
 import org.apache.hadoop.hdfs.server.balancer.Balancer.Result;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.SimulatedFSDataset;
 import org.apache.hadoop.http.HttpConfig;
@@ -86,6 +87,7 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Level;
+import org.junit.After;
 import org.junit.Test;
 
 /**
@@ -96,6 +98,7 @@ public class TestBalancer {
 
   static {
     ((Log4JLogger)Balancer.LOG).getLogger().setLevel(Level.ALL);
+    ((Log4JLogger)Dispatcher.LOG).getLogger().setLevel(Level.DEBUG);
   }
 
   final static long CAPACITY = 5000L;
@@ -125,8 +128,6 @@ public class TestBalancer {
   }
 
   public static void initTestSetup() {
-    Dispatcher.setBlockMoveWaitTime(1000L) ;
-
     // do not create id file since it occupies the disk space
     NameNodeConnector.setWrite2IdFile(false);
   }
@@ -135,10 +136,13 @@ public class TestBalancer {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, DEFAULT_BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_BYTES_PER_CHECKSUM_KEY, DEFAULT_BLOCK_SIZE);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1L);
     SimulatedFSDataset.setFactory(conf);
+
     conf.setLong(DFSConfigKeys.DFS_BALANCER_MOVEDWINWIDTH_KEY, 2000L);
     conf.setInt(DFSConfigKeys.DFS_BALANCER_MAX_NO_MOVE_INTERVAL_KEY, 5*1000);
+    conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1L);
   }
 
   static void initConfWithRamDisk(Configuration conf) {
@@ -149,6 +153,7 @@ public class TestBalancer {
     conf.setInt(DFS_DATANODE_LAZY_WRITER_INTERVAL_SEC, 1);
     conf.setInt(DFS_DATANODE_RAM_DISK_LOW_WATERMARK_BYTES, DEFAULT_RAM_DISK_BLOCK_SIZE);
     conf.setInt(DFSConfigKeys.DFS_BALANCER_MAX_NO_MOVE_INTERVAL_KEY, 5*1000);
+    conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1L);
   }
 
   static void initSecureConf(Configuration conf) throws Exception {
@@ -203,6 +208,14 @@ public class TestBalancer {
     conf.set(DFS_SERVER_HTTPS_KEYSTORE_RESOURCE_KEY,
         KeyStoreTestUtil.getServerSSLConfigFileName());
     initConf(conf);
+  }
+
+  @After
+  public void shutdown() throws Exception {
+    if (cluster != null) {
+      cluster.shutdown();
+      cluster = null;
+    }
   }
 
   /* create a file with a length of <code>fileLen</code> */
@@ -618,6 +631,7 @@ public class TestBalancer {
    *   parsing, etc.   Otherwise invoke balancer API directly.
    * @param useFile - if true, the hosts to included or excluded will be stored in a
    *   file and then later read from the file.
+   * @param useNamesystemSpy - spy on FSNamesystem if true
    * @throws Exception
    */
   private void doTest(Configuration conf, long[] capacities,
@@ -630,15 +644,21 @@ public class TestBalancer {
     LOG.info("useTool    = " +  useTool);
     assertEquals(capacities.length, racks.length);
     int numOfDatanodes = capacities.length;
-    cluster = new MiniDFSCluster.Builder(conf)
-                                .numDataNodes(capacities.length)
-                                .racks(racks)
-                                .simulatedCapacities(capacities)
-                                .build();
+
     try {
+      cluster = new MiniDFSCluster.Builder(conf)
+                                  .numDataNodes(0)
+                                  .build();
+      cluster.getConfiguration(0).setInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+          DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+      conf.setInt(DFSConfigKeys.DFS_REPLICATION_KEY,
+          DFSConfigKeys.DFS_REPLICATION_DEFAULT);
+      cluster.startDataNodes(conf, numOfDatanodes, true,
+          StartupOption.REGULAR, racks, null, capacities, false);
+      cluster.waitClusterUp();
       cluster.waitActive();
-      client = NameNodeProxies.createProxy(conf, cluster.getFileSystem(0).getUri(),
-          ClientProtocol.class).getProxy();
+      client = NameNodeProxies.createProxy(conf,
+          cluster.getFileSystem(0).getUri(), ClientProtocol.class).getProxy();
 
       long totalCapacity = sum(capacities);
       
@@ -720,7 +740,9 @@ public class TestBalancer {
         runBalancer(conf, totalUsedSpace, totalCapacity, p, expectedExcludedNodes);
       }
     } finally {
-      cluster.shutdown();
+      if(cluster != null) {
+        cluster.shutdown();
+      }
     }
   }
 
@@ -1401,6 +1423,7 @@ public class TestBalancer {
     conf.setLong(DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setInt(DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 500);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1);
+    conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1L);
 
     final int BLOCK_SIZE = 1024*1024;
     cluster = new MiniDFSCluster
@@ -1476,6 +1499,8 @@ public class TestBalancer {
     conf.setLong(DFSConfigKeys.DFS_BLOCK_SIZE_KEY, blockSize);
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1L);
     conf.setLong(DFSConfigKeys.DFS_NAMENODE_REPLICATION_INTERVAL_KEY, 1L);
+
+    conf.setLong(DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY, 1L);
 
     int numOfDatanodes =2;
     final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
@@ -1717,6 +1742,26 @@ public class TestBalancer {
       UserGroupInformation.reset();
       UserGroupInformation.setConfiguration(new Configuration());
     }
+  }
+
+  /**
+   * Test that makes the Balancer to disperse RPCs to the NameNode
+   * in order to avoid NN's RPC queue saturation.
+   */
+  void testBalancerRPCDelay() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    initConf(conf);
+    conf.setInt(DFSConfigKeys.DFS_BALANCER_DISPATCHERTHREADS_KEY, 30);
+
+    int numDNs = 40;
+    long[] capacities = new long[numDNs];
+    String[] racks = new String[numDNs];
+    for(int i = 0; i < numDNs; i++) {
+      capacities[i] = CAPACITY;
+      racks[i] = (i < numDNs/2 ? RACK0 : RACK1);
+    }
+    doTest(conf, capacities, racks, CAPACITY, RACK2,
+        new PortNumberBasedNodes(3, 0, 0), false, false);
   }
 
   /**
