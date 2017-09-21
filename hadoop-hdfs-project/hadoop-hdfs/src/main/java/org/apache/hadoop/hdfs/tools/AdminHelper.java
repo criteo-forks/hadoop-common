@@ -26,6 +26,7 @@ import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.tools.TableListing;
 
 import java.io.IOException;
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -46,6 +47,16 @@ public class AdminHelper {
           " is not an HDFS file system");
     }
     return (DistributedFileSystem)fs;
+  }
+
+  static DistributedFileSystem getDFS(URI uri, Configuration conf)
+      throws IOException {
+    FileSystem fs = FileSystem.get(uri, conf);
+    if (!(fs instanceof DistributedFileSystem)) {
+      throw new IllegalArgumentException("FileSystem " + fs.getUri()
+          + " is not an HDFS file system");
+    }
+    return (DistributedFileSystem) fs;
   }
 
   /**

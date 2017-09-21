@@ -186,7 +186,7 @@ public class CacheAdmin extends Configured implements Tool {
         return 1;
       }
         
-      DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+      DistributedFileSystem dfs = AdminHelper.getDFS(new Path(path).toUri(),conf);
       CacheDirectiveInfo directive = builder.build();
       EnumSet<CacheFlag> flags = EnumSet.noneOf(CacheFlag.class);
       if (force) {
@@ -405,7 +405,7 @@ public class CacheAdmin extends Configured implements Tool {
       }
       int exitCode = 0;
       try {
-        DistributedFileSystem dfs = AdminHelper.getDFS(conf);
+        DistributedFileSystem dfs = AdminHelper.getDFS(new Path(path).toUri(),conf);
         RemoteIterator<CacheDirectiveEntry> iter =
             dfs.listCacheDirectives(
                 new CacheDirectiveInfo.Builder().
