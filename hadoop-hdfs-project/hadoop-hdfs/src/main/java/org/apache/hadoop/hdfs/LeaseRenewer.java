@@ -31,7 +31,9 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -405,7 +407,7 @@ class LeaseRenewer {
 
   private void renew() throws IOException {
     final List<DFSClient> copies;
-    synchronized(this) {
+    synchronized (this) {
       copies = new ArrayList<DFSClient>(dfsclients);
     }
     //sort the client names for finding out repeated names.
@@ -416,16 +418,36 @@ class LeaseRenewer {
       }
     });
     String previousName = "";
-    for(int i = 0; i < copies.size(); i++) {
+    for (int i = 0; i < copies.size(); i++) {
       final DFSClient c = copies.get(i);
       //skip if current client name is the same as the previous name.
       if (!c.getClientName().equals(previousName)) {
-        if (!c.renewLease()) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Did not renew lease for client " +
-                c);
+        try {
+          if (!c.renewLease()) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Did not renew lease for client " +
+                      c);
+            }
+            continue;
           }
-          continue;
+        } catch (SecretManager.InvalidToken ite) {
+          // Abort if token has already expired
+            LOG.warn("Failed to renew lease for " + c.getClientName() + " due to invalid token issue. "
+                    + "Closing all files being written ...", ite);
+            c.closeAllFilesBeingWritten(true);
+        } catch (IOException e) {
+          // Abort if the lease has already expired.
+          final long elapsed = Time.monotonicNow() - c.getLastLeaseRenewal();
+          if (elapsed > HdfsConstants.LEASE_HARDLIMIT_PERIOD) {
+            LOG.warn("Failed to renew lease for " + c.getClientName() + " for "
+                    + (elapsed / 1000) + " seconds (>= hard-limit ="
+                    + (HdfsConstants.LEASE_HARDLIMIT_PERIOD / 1000) + " seconds.) "
+                    + "Closing all files being written ...", e);
+            c.closeAllFilesBeingWritten(true);
+          } else {
+            // Let the lease renewer handle it and retry.
+            throw e;
+          }
         }
         previousName = c.getClientName();
         if (LOG.isDebugEnabled()) {

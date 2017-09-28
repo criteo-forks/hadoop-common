@@ -18,11 +18,15 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.Assert;
@@ -122,7 +126,46 @@ public class TestLeaseRenewer {
 
     renewer.closeFile(fileId, MOCK_DFSCLIENT);
   }
-  
+
+  @Test
+  public void testRenewalFailed() throws Exception {
+    // Keep track of how many times the lease gets renewed
+    final AtomicInteger leaseRenewalCount = new AtomicInteger();
+    final AtomicBoolean isExecuted = new AtomicBoolean();
+    isExecuted.set(false);
+
+    Mockito.doAnswer(new Answer<Boolean>() {
+      @Override
+      public Boolean answer(InvocationOnMock invocation) throws Throwable {
+        leaseRenewalCount.incrementAndGet();
+        throw new SecretManager.InvalidToken(
+           "token (HDFS_DELEGATION_TOKEN token 111018676 for hdfs) is expired");
+      }
+    }).when(MOCK_DFSCLIENT).renewLease();
+
+    Mockito.doAnswer(new Answer<Void>() {
+      @Override
+      public Void answer(InvocationOnMock invocation) throws Throwable {
+        isExecuted.set(true);
+        return null;
+      }
+    }).when(MOCK_DFSCLIENT).closeAllFilesBeingWritten(true);
+
+    // Set up a file so that we start renewing our lease.
+    DFSOutputStream mockStream = Mockito.mock(DFSOutputStream.class);
+    long fileId = 123L;
+    renewer.put(fileId, mockStream, MOCK_DFSCLIENT);
+
+    // Wait for lease to get renewed
+    long failTime = Time.monotonicNow() + 5000;
+    while (Time.monotonicNow() < failTime && !isExecuted.get()) {
+      Thread.sleep(50);
+    }
+    assertTrue(isExecuted.get());
+
+    renewer.closeFile(fileId, MOCK_DFSCLIENT);
+  }
+
   /**
    * Regression test for HDFS-2810. In this bug, the LeaseRenewer has handles
    * to several DFSClients with the same name, the first of which has no files
@@ -164,7 +207,7 @@ public class TestLeaseRenewer {
           LeaseRenewer.LOG.warn("Not yet satisfied", err);
           return false;
         } catch (IOException e) {
-          // should not throw!
+         // should not throw!
           throw new RuntimeException(e);
         }
       }
@@ -184,7 +227,7 @@ public class TestLeaseRenewer {
     // Pretend to open a file
     renewer.put(fileId, mockStream, MOCK_DFSCLIENT);
     
-    Assert.assertTrue("Renewer should have started running",
+    assertTrue("Renewer should have started running",
         renewer.isRunning());
     
     // Check the thread name is reasonable

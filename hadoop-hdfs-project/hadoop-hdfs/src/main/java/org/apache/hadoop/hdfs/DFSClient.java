@@ -897,7 +897,7 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
     return clientRunning;
   }
 
-  long getLastLeaseRenewal() {
+  public long getLastLeaseRenewal() {
     return lastLeaseRenewal;
   }
 
@@ -921,19 +921,8 @@ public class DFSClient implements java.io.Closeable, RemotePeerFactory,
         namenode.renewLease(clientName);
         updateLastLeaseRenewal();
         return true;
-      } catch (IOException e) {
-        // Abort if the lease has already expired. 
-        final long elapsed = Time.monotonicNow() - getLastLeaseRenewal();
-        if (elapsed > HdfsConstants.LEASE_HARDLIMIT_PERIOD) {
-          LOG.warn("Failed to renew lease for " + clientName + " for "
-              + (elapsed/1000) + " seconds (>= hard-limit ="
-              + (HdfsConstants.LEASE_HARDLIMIT_PERIOD/1000) + " seconds.) "
-              + "Closing all files being written ...", e);
-          closeAllFilesBeingWritten(true);
-        } else {
-          // Let the lease renewer handle it and retry.
-          throw e;
-        }
+      } catch (RemoteException re) {
+        throw re.unwrapRemoteException();
       }
     }
     return false;
