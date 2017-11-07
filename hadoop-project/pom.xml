@@ -1315,7 +1315,7 @@
             <executions>
               <execution>
                 <!-- builds source jars and attaches them to the project for publishing -->
-                <id>hadoop-java-sources</id>
+                <id>attach-sources</id>
                 <phase>package</phase>
                 <goals>
                   <goal>jar-no-fork</goal>
