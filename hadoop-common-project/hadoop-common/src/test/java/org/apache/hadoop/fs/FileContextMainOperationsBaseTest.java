@@ -963,7 +963,8 @@ public abstract class FileContextMainOperationsBaseTest  {
     Path src = getTestRootPath(fc, "test/hadoop/file");
     createFile(src);
     Path dst = getTestRootPath(fc, "test/new/existingFile");
-    createFile(dst);
+    byte[] existingContent = "random existing content".getBytes();
+    createFile(dst, existingContent, 0, existingContent.length);
     
     // Fails without overwrite option
     try {
@@ -975,6 +976,10 @@ public abstract class FileContextMainOperationsBaseTest  {
     
     // Succeeds with overwrite option
     rename(src, dst, true, false, true, Rename.OVERWRITE);
+
+    // Should not fail
+    FSDataInputStream in = fc.open(dst);
+    in.close();
   }
 
   @Test
@@ -1198,9 +1203,12 @@ public abstract class FileContextMainOperationsBaseTest  {
   }
   
   protected void createFile(Path path) throws IOException {
-    FSDataOutputStream out = fc.create(path, EnumSet.of(CREATE),
-        Options.CreateOpts.createParent());
-    out.write(data, 0, data.length);
+    createFile(path, data, 0, data.length);
+  }
+
+  protected void createFile(Path path, byte[] content, int offset, int length) throws IOException {
+    FSDataOutputStream out = fc.create(path, EnumSet.of(CREATE), CreateOpts.createParent());
+    out.write(content, offset, length);
     out.close();
   }
 
