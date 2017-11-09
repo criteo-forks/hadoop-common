@@ -21,6 +21,8 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
