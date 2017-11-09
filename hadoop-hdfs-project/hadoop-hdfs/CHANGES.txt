@@ -5,6 +5,8 @@ Release 2.6.0 - 2014-11-18
   INCOMPATIBLE CHANGES
 
   NEW FEATURES
+    HDFS-7891. A block placement policy with best rack failure tolerance.
+    (Walter Su via szetszwo)
 
     HDFS-9412. getBlocks occupies FSLock and takes too long to complete.
     Contributed by He Tianyi. Backport HDFS-11855 by Vinitha Reddy Gankidi.
@@ -16,6 +18,8 @@ Release 2.6.0 - 2014-11-18
     tasks below for features and contributors).
 
   IMPROVEMENTS
+    HDFS-8513. Rename BlockPlacementPolicyRackFaultTolarent to
+    BlockPlacementPolicyRackFaultTolerant. (wang)
 
     HDFS-8824. Do not use small blocks for balancing the cluster.  (szetszwo)
 
