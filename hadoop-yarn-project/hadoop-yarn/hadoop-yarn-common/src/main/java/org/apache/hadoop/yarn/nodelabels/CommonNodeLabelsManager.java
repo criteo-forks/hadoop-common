@@ -40,6 +40,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
@@ -51,6 +52,7 @@ import org.apache.hadoop.yarn.nodelabels.event.RemoveClusterNodeLabels;
 import org.apache.hadoop.yarn.nodelabels.event.UpdateNodeToLabelsMappingsEvent;
 import org.apache.hadoop.yarn.util.resource.Resources;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 
 public class CommonNodeLabelsManager extends AbstractService {
@@ -63,6 +65,14 @@ public class CommonNodeLabelsManager extends AbstractService {
   private static final Pattern LABEL_PATTERN = Pattern
       .compile("^[0-9a-zA-Z][0-9a-zA-Z-_]*");
   public static final int WILDCARD_PORT = 0;
+  
+  /**
+   * Error messages
+   */
+  @VisibleForTesting
+  public static final String NODE_LABELS_NOT_ENABLED_ERR =
+      "Node-label-based scheduling is disabled. Please check "
+          + YarnConfiguration.NODE_LABELS_ENABLED;
 
   /**
    * If a user doesn't specify label of a queue or node, it belongs
@@ -72,8 +82,8 @@ public class CommonNodeLabelsManager extends AbstractService {
 
   protected Dispatcher dispatcher;
 
-  protected ConcurrentMap<String, Label> labelCollections =
-      new ConcurrentHashMap<String, Label>();
+  protected ConcurrentMap<String, NodeLabel> labelCollections =
+      new ConcurrentHashMap<String, NodeLabel>();
   protected ConcurrentMap<String, Host> nodeCollections =
       new ConcurrentHashMap<String, Host>();
 
@@ -81,14 +91,8 @@ public class CommonNodeLabelsManager extends AbstractService {
   protected final WriteLock writeLock;
 
   protected NodeLabelsStore store;
+  private boolean nodeLabelsEnabled = false;
 
-  protected static class Label {
-    public Resource resource;
-
-    protected Label() {
-      this.resource = Resource.newInstance(0, 0);
-    }
-  }
 
   /**
    * A <code>Host</code> can have multiple <code>Node</code>s 
@@ -194,9 +198,15 @@ public class CommonNodeLabelsManager extends AbstractService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
-    initNodeLabelStore(conf);
+    // set if node labels enabled
+    nodeLabelsEnabled =
+        conf.getBoolean(YarnConfiguration.NODE_LABELS_ENABLED,
+            YarnConfiguration.DEFAULT_NODE_LABELS_ENABLED);
+    if (nodeLabelsEnabled) {
+      initNodeLabelStore(conf);
+    }
     
-    labelCollections.put(NO_LABEL, new Label());
+    labelCollections.put(NO_LABEL, new NodeLabel(NO_LABEL));
   }
 
   protected void initNodeLabelStore(Configuration conf) throws Exception {
@@ -251,6 +261,10 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   @SuppressWarnings("unchecked")
   public void addToCluserNodeLabels(Set<String> labels) throws IOException {
+    if (!nodeLabelsEnabled) {
+      LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
+      throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
+    }
     if (null == labels || labels.isEmpty()) {
       return;
     }
@@ -266,7 +280,7 @@ public class CommonNodeLabelsManager extends AbstractService {
     for (String label : labels) {
       // shouldn't overwrite it to avoid changing the Label.resource
       if (this.labelCollections.get(label) == null) {
-        this.labelCollections.put(label, new Label());
+        this.labelCollections.put(label, new NodeLabel(label));
         newLabels.add(label);
       }
     }
@@ -344,6 +358,10 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   public void addLabelsToNode(Map<NodeId, Set<String>> addedLabelsToNode)
       throws IOException {
+    if (!nodeLabelsEnabled) {
+      LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
+      throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
+    }
     addedLabelsToNode = normalizeNodeIdToLabels(addedLabelsToNode);
     checkAddLabelsToNode(addedLabelsToNode);
     internalAddLabelsToNode(addedLabelsToNode);
@@ -410,6 +428,11 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   public void removeFromClusterNodeLabels(Collection<String> labelsToRemove)
       throws IOException {
+    if (!nodeLabelsEnabled) {
+      LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
+      throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
+    }
+    
     labelsToRemove = normalizeLabels(labelsToRemove);
     
     checkRemoveFromClusterNodeLabels(labelsToRemove);
@@ -521,6 +544,11 @@ public class CommonNodeLabelsManager extends AbstractService {
   public void
       removeLabelsFromNode(Map<NodeId, Set<String>> removeLabelsFromNode)
           throws IOException {
+    if (!nodeLabelsEnabled) {
+      LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
+      throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
+    }
+    
     removeLabelsFromNode = normalizeNodeIdToLabels(removeLabelsFromNode);
     
     checkRemoveLabelsFromNode(removeLabelsFromNode);
@@ -595,6 +623,11 @@ public class CommonNodeLabelsManager extends AbstractService {
    */
   public void replaceLabelsOnNode(Map<NodeId, Set<String>> replaceLabelsToNode)
       throws IOException {
+    if (!nodeLabelsEnabled) {
+      LOG.error(NODE_LABELS_NOT_ENABLED_ERR);
+      throw new IOException(NODE_LABELS_NOT_ENABLED_ERR);
+    }
+    
     replaceLabelsToNode = normalizeNodeIdToLabels(replaceLabelsToNode);
     
     checkReplaceLabelsOnNode(replaceLabelsToNode);

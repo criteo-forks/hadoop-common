@@ -20,12 +20,14 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -65,10 +67,11 @@ public class AppSchedulingInfo {
   final Set<Priority> priorities = new TreeSet<Priority>(
       new org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.Comparator());
   final Map<Priority, Map<String, ResourceRequest>> requests =
-    new HashMap<Priority, Map<String, ResourceRequest>>();
+    new ConcurrentHashMap<Priority, Map<String, ResourceRequest>>();
   private AtomicBoolean userBlacklistChanged = new AtomicBoolean(false);
   private Set<String> userBlacklist = new HashSet<>();
   private Set<String> amBlacklist = new HashSet<>();
+
 
   //private final ApplicationStore store;
   private ActiveUsersManager activeUsersManager;
@@ -157,12 +160,36 @@ public class AppSchedulingInfo {
         if (request.getNumContainers() > 0) {
           activeUsersManager.activateApplication(user, applicationId);
         }
+        ResourceRequest previousAnyRequest =
+            getResourceRequest(priority, resourceName);
+
+        // When there is change in ANY request label expression, we should
+        // update label for all resource requests already added of same
+        // priority as ANY resource request.
+        if ((null == previousAnyRequest)
+            || isRequestLabelChanged(previousAnyRequest, request)) {
+          Map<String, ResourceRequest> resourceRequest =
+              getResourceRequests(priority);
+          if (resourceRequest != null) {
+            for (ResourceRequest r : resourceRequest.values()) {
+              if (!r.getResourceName().equals(ResourceRequest.ANY)) {
+                r.setNodeLabelExpression(request.getNodeLabelExpression());
+              }
+            }
+          }
+        }
+      } else {
+        ResourceRequest anyRequest =
+            getResourceRequest(priority, ResourceRequest.ANY);
+        if (anyRequest != null) {
+          request.setNodeLabelExpression(anyRequest.getNodeLabelExpression());
+        }
       }
 
       Map<String, ResourceRequest> asks = this.requests.get(priority);
 
       if (asks == null) {
-        asks = new HashMap<String, ResourceRequest>();
+        asks = new ConcurrentHashMap<String, ResourceRequest>();
         this.requests.put(priority, asks);
         this.priorities.add(priority);
       }
@@ -193,6 +220,13 @@ public class AppSchedulingInfo {
             lastRequestCapability);
       }
     }
+  }
+
+  private boolean isRequestLabelChanged(ResourceRequest requestOne,
+      ResourceRequest requestTwo) {
+    String requestOneLabelExp = requestOne.getNodeLabelExpression();
+    String requestTwoLabelExp = requestTwo.getNodeLabelExpression();
+    return (!(requestOneLabelExp.equals(requestTwoLabelExp)));
   }
 
   /**
@@ -251,7 +285,7 @@ public class AppSchedulingInfo {
     return requests.get(priority);
   }
 
-  synchronized public List<ResourceRequest> getAllResourceRequests() {
+  public List<ResourceRequest> getAllResourceRequests() {
     List<ResourceRequest> ret = new ArrayList<ResourceRequest>();
     for (Map<String, ResourceRequest> r : requests.values()) {
       ret.addAll(r.values());
@@ -358,17 +392,11 @@ public class AppSchedulingInfo {
       Priority priority, ResourceRequest nodeLocalRequest, Container container,
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
-    nodeLocalRequest.setNumContainers(nodeLocalRequest.getNumContainers() - 1);
-    if (nodeLocalRequest.getNumContainers() == 0) {
-      this.requests.get(priority).remove(node.getNodeName());
-    }
+    decResourceRequest(node.getNodeName(), priority, nodeLocalRequest);
 
     ResourceRequest rackLocalRequest = requests.get(priority).get(
         node.getRackName());
-    rackLocalRequest.setNumContainers(rackLocalRequest.getNumContainers() - 1);
-    if (rackLocalRequest.getNumContainers() == 0) {
-      this.requests.get(priority).remove(node.getRackName());
-    }
+    decResourceRequest(node.getRackName(), priority, rackLocalRequest);
 
     ResourceRequest offRackRequest = requests.get(priority).get(
         ResourceRequest.ANY);
@@ -380,6 +408,14 @@ public class AppSchedulingInfo {
     resourceRequests.add(cloneResourceRequest(offRackRequest));
   }
 
+  private void decResourceRequest(String resourceName, Priority priority,
+      ResourceRequest request) {
+    request.setNumContainers(request.getNumContainers() - 1);
+    if (request.getNumContainers() == 0) {
+      requests.get(priority).remove(resourceName);
+    }
+  }
+
   /**
    * The {@link ResourceScheduler} is allocating data-local resources to the
    * application.
@@ -388,11 +424,8 @@ public class AppSchedulingInfo {
       Priority priority, ResourceRequest rackLocalRequest, Container container,
       List<ResourceRequest> resourceRequests) {
     // Update future requirements
-    rackLocalRequest.setNumContainers(rackLocalRequest.getNumContainers() - 1);
-    if (rackLocalRequest.getNumContainers() == 0) {
-      this.requests.get(priority).remove(node.getRackName());
-    }
-
+    decResourceRequest(node.getRackName(), priority, rackLocalRequest);
+    
     ResourceRequest offRackRequest = requests.get(priority).get(
         ResourceRequest.ANY);
     decrementOutstanding(offRackRequest);
