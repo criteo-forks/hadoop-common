@@ -2,6 +2,23 @@ Hadoop YARN Change Log
 
 Criteo Release
 
+   YARN-4140. RM container allocation delayed incase of app submitted to
+       Nodelabel partition. (Bibin A Chundatt via wangda)
+       Backport by Jonathan Hung.
+
+   YARN-3230. Clarify application states on the web UI. (Jian He via wangda)
+
+   YARN-2943. Added node-labels page on RM web UI. (Wangda Tan via jianhe)
+
+   YARN-2920. Changed CapacityScheduler to kill containers on nodes where
+       node labels are changed. (Wangda Tan via jianhe)
+
+   YARN-2800. Remove MemoryNodeLabelsStore and add a way to enable/disable
+       node labels feature. (Wangda Tan via ozawa)
+
+   YARN-2786. Created a yarn cluster CLI and seeded with one command for listing
+       node-labels collection. (Wangda Tan via vinodkv)
+
    YARN-1471. The SLS simulator is not running the preemption policy
        for CapacityScheduler (Carlo Curino via cdouglas)
 

@@ -28,7 +28,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.Capacity
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler;
 import org.apache.hadoop.yarn.util.StringHelper;
 import org.apache.hadoop.yarn.webapp.Controller;
-import org.apache.hadoop.yarn.webapp.WebAppException;
 import org.apache.hadoop.yarn.webapp.YarnWebParams;
 
 import com.google.inject.Inject;
@@ -96,6 +95,11 @@ public class RmController extends Controller {
 
   public void submit() {
     setTitle("Application Submission Not Allowed");
+  }
+
+  public void nodelabels() {
+    setTitle("Node Labels");
+    render(NodeLabelsPage.class);
   }
 
   public void logaggregationstatus() {
