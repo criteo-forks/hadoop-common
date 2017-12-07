@@ -2,6 +2,9 @@ Hadoop HDFS Change Log
 
 Criteo Release
 
+   HDFS-11576. Block recovery will fail indefinitely if recovery time > heartbeat interval.
+   Contributed by Lukas Majercak
+
    HDFS-1172. Blocks in newly completed files are considered under-replicated too quickly.
    Contributed by Masatake Iwasaki
 
