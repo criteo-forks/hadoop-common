@@ -92,7 +92,7 @@ public class JobHistoryUtils {
     FsPermission.createImmutable((short) 01777);
 
   public static final FsPermission HISTORY_INTERMEDIATE_FILE_PERMISSIONS = 
-    FsPermission.createImmutable((short) 0770); // rwx------
+    FsPermission.createImmutable((short) 0775); // -rwxrwxr-x
   
   /**
    * Suffix for configuration files.
