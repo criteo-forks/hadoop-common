@@ -2,6 +2,9 @@ Hadoop HDFS Change Log
 
 Criteo Release
 
+   HDFS-1172. Blocks in newly completed files are considered under-replicated too quickly.
+   Contributed by Masatake Iwasaki
+
    HDFS-11499. Decommissioning stuck because of failing recovery.
    Contributed by Lukas Majercak and Manoj Govindassamy.
 
