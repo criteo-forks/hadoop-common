@@ -214,6 +214,15 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
    */
   public static ResourceCalculatorProcessTree getResourceCalculatorProcessTree(
     String pid, Class<? extends ResourceCalculatorProcessTree> clazz, Configuration conf) {
+    if (clazz == null) {
+      // No class given, try a os specific class
+      if (ProcfsBasedProcessTree.isAvailable()) {
+        clazz = ProcfsBasedProcessTree.class;
+      }
+      if (WindowsBasedProcessTree.isAvailable()) {
+        clazz = WindowsBasedProcessTree.class;
+      }
+    }
 
     if (clazz != null) {
       try {
@@ -224,14 +233,6 @@ public abstract class ResourceCalculatorProcessTree extends Configured {
       } catch(Exception e) {
         throw new RuntimeException(e);
       }
-    }
-
-    // No class given, try a os specific class
-    if (ProcfsBasedProcessTree.isAvailable()) {
-      return new ProcfsBasedProcessTree(pid);
-    }
-    if (WindowsBasedProcessTree.isAvailable()) {
-      return new WindowsBasedProcessTree(pid);
     }
 
     // Not supported on this system.
