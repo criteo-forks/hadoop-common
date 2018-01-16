@@ -942,7 +942,7 @@ public class NNThroughputBenchmark implements Tool {
       };
       nameNodeProto.blockReport(dnRegistration, 
           nameNode.getNamesystem().getBlockPoolId(), reports,
-              new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
+              new BlockReportContext(1, 0, System.nanoTime(), 0L));
     }
 
     /**
@@ -1220,7 +1220,7 @@ public class NNThroughputBenchmark implements Tool {
           dn.storage, dn.getBlockReportList()) };
       nameNodeProto.blockReport(dn.dnRegistration,
           nameNode.getNamesystem().getBlockPoolId(), report,
-          new BlockReportContext(1, 0, System.nanoTime(), 0L, true));
+          new BlockReportContext(1, 0, System.nanoTime(), 0L));
       long end = Time.now();
       return end-start;
     }

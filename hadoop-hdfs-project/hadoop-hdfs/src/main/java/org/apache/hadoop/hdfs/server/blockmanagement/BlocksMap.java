@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
-import java.util.Collections;
 import java.util.Iterator;
 
 import org.apache.hadoop.hdfs.protocol.Block;
@@ -36,6 +35,30 @@ import com.google.common.collect.Iterables;
  * the datanodes that store the block.
  */
 class BlocksMap {
+  private static class StorageIterator implements Iterator<DatanodeStorageInfo> {
+    private final BlockInfo blockInfo;
+    private int nextIdx = 0;
+      
+    StorageIterator(BlockInfo blkInfo) {
+      this.blockInfo = blkInfo;
+    }
+
+    @Override
+    public boolean hasNext() {
+      return blockInfo != null && nextIdx < blockInfo.getCapacity()
+              && blockInfo.getDatanode(nextIdx) != null;
+    }
+
+    @Override
+    public DatanodeStorageInfo next() {
+      return blockInfo.getStorageInfo(nextIdx++);
+    }
+
+    @Override
+    public void remove()  {
+      throw new UnsupportedOperationException("Sorry. can't remove.");
+    }
+  }
 
   /** Constant {@link LightWeightGSet} capacity. */
   private final int capacity;
@@ -120,9 +143,7 @@ class BlocksMap {
    * returns {@link Iterable} of the storages the block belongs to.
    */
   Iterable<DatanodeStorageInfo> getStorages(Block b) {
-    BlockInfo block = blocks.get(b);
-    return block != null ? getStorages(block)
-           : Collections.<DatanodeStorageInfo>emptyList();
+    return getStorages(blocks.get(b));
   }
 
   /**
@@ -146,16 +167,12 @@ class BlocksMap {
    * returns {@link Iterable} of the storages the block belongs to.
    */
   Iterable<DatanodeStorageInfo> getStorages(final BlockInfo storedBlock) {
-    if (storedBlock == null) {
-      return Collections.emptyList();
-    } else {
-      return new Iterable<DatanodeStorageInfo>() {
-        @Override
-        public Iterator<DatanodeStorageInfo> iterator() {
-          return storedBlock.getStorageInfos();
-        }
-      };
-    }
+    return new Iterable<DatanodeStorageInfo>() {
+      @Override
+      public Iterator<DatanodeStorageInfo> iterator() {
+        return new StorageIterator(storedBlock);
+      }
+    };
   }
 
   /** counts number of containing nodes. Better than using iterator. */
