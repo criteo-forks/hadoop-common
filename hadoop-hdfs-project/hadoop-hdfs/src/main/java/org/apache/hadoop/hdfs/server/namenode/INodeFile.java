@@ -554,10 +554,9 @@ public class INodeFile extends INodeWithAdditionalFields
 
   @Override
   public final ContentSummaryComputationContext computeContentSummary(
-      int snapshotId, final ContentSummaryComputationContext summary) {
-    summary.nodeIncluded(this);
+      final ContentSummaryComputationContext summary) {
     computeContentSummary4Snapshot(summary.getCounts());
-    computeContentSummary4Current(snapshotId, summary.getCounts());
+    computeContentSummary4Current(summary.getCounts());
     return summary;
   }
 
@@ -580,16 +579,14 @@ public class INodeFile extends INodeWithAdditionalFields
     }
   }
 
-  private void computeContentSummary4Current(
-      int snapshotId, final Content.Counts counts) {
+  private void computeContentSummary4Current(final Content.Counts counts) {
     FileWithSnapshotFeature sf = this.getFileWithSnapshotFeature();
     if (sf != null && sf.isCurrentFileDeleted()) {
       return;
     }
 
+    counts.add(Content.LENGTH, computeFileSize());
     counts.add(Content.FILE, 1);
-    final long fileLen = computeFileSize(snapshotId);
-    counts.add(Content.LENGTH, fileLen);
     counts.add(Content.DISKSPACE, diskspaceConsumed());
   }
 

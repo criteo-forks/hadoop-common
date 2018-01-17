@@ -494,42 +494,31 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
 
   /** Compute {@link ContentSummary}. Blocking call */
   public final ContentSummary computeContentSummary() {
-    return computeAndConvertContentSummary(Snapshot.CURRENT_STATE_ID,
+    return computeAndConvertContentSummary(
         new ContentSummaryComputationContext());
   }
 
   /**
    * Compute {@link ContentSummary}. 
    */
-  public final ContentSummary computeAndConvertContentSummary(int snapshotId,
+  public final ContentSummary computeAndConvertContentSummary(
       ContentSummaryComputationContext summary) {
-    computeContentSummary(snapshotId, summary);
-    summary.tallyDeletedSnapshottedINodes();
-    final Content.Counts counts = summary.getCounts();
-    final Content.Counts snapshotCounts = summary.getSnapshotCounts();
+    Content.Counts counts = computeContentSummary(summary).getCounts();
     final Quota.Counts q = getQuotaCounts();
     return new ContentSummary(counts.get(Content.LENGTH),
         counts.get(Content.FILE) + counts.get(Content.SYMLINK),
         counts.get(Content.DIRECTORY), q.get(Quota.NAMESPACE),
-        counts.get(Content.DISKSPACE), q.get(Quota.DISKSPACE),
-        snapshotCounts.get(Content.LENGTH), snapshotCounts.get(Content.FILE),
-        snapshotCounts.get(Content.DIRECTORY),
-        snapshotCounts.get(Content.DISKSPACE));
+        counts.get(Content.DISKSPACE), q.get(Quota.DISKSPACE));
   }
 
   /**
    * Count subtree content summary with a {@link Content.Counts}.
    *
-   * @param snapshotId Specify the time range for the calculation. If this
-   *                   parameter equals to {@link Snapshot#CURRENT_STATE_ID},
-   *                   the result covers both the current states and all the
-   *                   snapshots. Otherwise the result only covers all the
-   *                   files/directories contained in the specific snapshot.
    * @param summary the context object holding counts for the subtree.
    * @return The same objects as summary.
    */
   public abstract ContentSummaryComputationContext computeContentSummary(
-      int snapshotId, ContentSummaryComputationContext summary);
+      ContentSummaryComputationContext summary);
 
 
   /**
@@ -809,8 +798,7 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]>,
 
   private static void checkAbsolutePath(final String path) {
     if (path == null || !path.startsWith(Path.SEPARATOR)) {
-      throw new AssertionError("Absolute path required, but got '"
-          + path + "'");
+      throw new AssertionError("Absolute path required");
     }
   }
 
