@@ -244,7 +244,6 @@ public class Hdfs extends AbstractFileSystem {
      * @return the next item in the list
      * 
      * @throws IOException if there is any error
-     * @throws NoSuchElmentException if no more entry is available
      */
     public HdfsFileStatus getNext() throws IOException {
       if (hasNext()) {

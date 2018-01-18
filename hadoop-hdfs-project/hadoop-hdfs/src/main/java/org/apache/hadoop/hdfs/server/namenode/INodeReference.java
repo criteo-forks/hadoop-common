@@ -341,10 +341,9 @@ public abstract class INodeReference extends INode {
   }
 
   @Override
-  public ContentSummaryComputationContext computeContentSummary(int snapshotId,
+  public ContentSummaryComputationContext computeContentSummary(
       ContentSummaryComputationContext summary) {
-    summary.nodeIncluded(this);
-    return referred.computeContentSummary(snapshotId, summary);
+    return referred.computeContentSummary(summary);
   }
 
   @Override
@@ -531,12 +530,10 @@ public abstract class INodeReference extends INode {
     
     @Override
     public final ContentSummaryComputationContext computeContentSummary(
-        int snapshotId, ContentSummaryComputationContext summary) {
-      summary.nodeIncluded(this);
-      final int s = snapshotId < lastSnapshotId ? snapshotId : lastSnapshotId;
+        ContentSummaryComputationContext summary) {
       //only count diskspace for WithName
       final Quota.Counts q = Quota.Counts.newInstance();
-      computeQuotaUsage(q, false, s);
+      computeQuotaUsage(q, false, lastSnapshotId);
       summary.getCounts().add(Content.DISKSPACE, q.get(Quota.DISKSPACE));
       return summary;
     }

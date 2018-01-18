@@ -604,18 +604,17 @@ public class INodeDirectory extends INodeWithAdditionalFields
   }
 
   @Override
-  public ContentSummaryComputationContext computeContentSummary(int snapshotId,
+  public ContentSummaryComputationContext computeContentSummary(
       ContentSummaryComputationContext summary) {
-    summary.nodeIncluded(this);
     final DirectoryWithSnapshotFeature sf = getDirectoryWithSnapshotFeature();
-    if (sf != null && snapshotId == Snapshot.CURRENT_STATE_ID) {
-      sf.computeContentSummary4Snapshot(summary);
+    if (sf != null) {
+      sf.computeContentSummary4Snapshot(summary.getCounts());
     }
     final DirectoryWithQuotaFeature q = getDirectoryWithQuotaFeature();
-    if (q != null && snapshotId == Snapshot.CURRENT_STATE_ID) {
+    if (q != null) {
       return q.computeContentSummary(this, summary);
     } else {
-      return computeDirectoryContentSummary(summary, snapshotId);
+      return computeDirectoryContentSummary(summary, Snapshot.CURRENT_STATE_ID);
     }
   }
 
@@ -629,7 +628,7 @@ public class INodeDirectory extends INodeWithAdditionalFields
       byte[] childName = child.getLocalNameBytes();
 
       long lastYieldCount = summary.getYieldCount();
-      child.computeContentSummary(snapshotId, summary);
+      child.computeContentSummary(summary);
 
       // Check whether the computation was paused in the subtree.
       // The counts may be off, but traversing the rest of children

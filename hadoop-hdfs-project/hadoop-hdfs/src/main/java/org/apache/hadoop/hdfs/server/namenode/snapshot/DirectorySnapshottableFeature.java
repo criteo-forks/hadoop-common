@@ -232,14 +232,13 @@ public class DirectorySnapshottableFeature extends DirectoryWithSnapshotFeature 
     }
   }
 
-  @Override
-  public void computeContentSummary4Snapshot(ContentSummaryComputationContext
-                                                   context) {
-    super.computeContentSummary4Snapshot(context);
-    Content.Counts counts = context.getCounts();
-    counts.add(Content.SNAPSHOT, snapshotsByNames.size());
-    counts.add(Content.SNAPSHOTTABLE_DIRECTORY, 1);
-    super.computeContentSummary4Snapshot(context);
+  public ContentSummaryComputationContext computeContentSummary(
+      final INodeDirectory snapshotRoot,
+      final ContentSummaryComputationContext summary) {
+    snapshotRoot.computeContentSummary(summary);
+    summary.getCounts().add(Content.SNAPSHOT, snapshotsByNames.size());
+    summary.getCounts().add(Content.SNAPSHOTTABLE_DIRECTORY, 1);
+    return summary;
   }
 
   /**
