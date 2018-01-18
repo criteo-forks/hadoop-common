@@ -555,7 +555,6 @@ public class INodeFile extends INodeWithAdditionalFields
   @Override
   public final ContentSummaryComputationContext computeContentSummary(
       int snapshotId, final ContentSummaryComputationContext summary) {
-    summary.nodeIncluded(this);
     computeContentSummary4Snapshot(summary.getCounts());
     computeContentSummary4Current(snapshotId, summary.getCounts());
     return summary;

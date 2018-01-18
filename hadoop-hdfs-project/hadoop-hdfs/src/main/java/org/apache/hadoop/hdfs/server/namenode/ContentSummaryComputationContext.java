@@ -20,11 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
-
-import java.util.HashSet;
-import java.util.Set;
-
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class ContentSummaryComputationContext {
@@ -37,8 +32,6 @@ public class ContentSummaryComputationContext {
   private long yieldCount = 0;
   private long sleepMilliSec = 0;
   private int sleepNanoSec = 0;
-  private Set<INode> includedNodes = new HashSet<>();
-  private Set<INode> deletedSnapshottedNodes = new HashSet<>();
 
   /**
    * Constructor
@@ -55,8 +48,8 @@ public class ContentSummaryComputationContext {
     this.fsn = fsn;
     this.limitPerRun = limitPerRun;
     this.nextCountLimit = limitPerRun;
-    setCounts(Content.Counts.newInstance());
-    setSnapshotCounts(this.snapshotCounts = Content.Counts.newInstance());
+    this.counts = Content.Counts.newInstance();
+    this.snapshotCounts = Content.Counts.newInstance();
     this.sleepMilliSec = sleepMicroSec/1000;
     this.sleepNanoSec = (int)((sleepMicroSec%1000)*1000);
   }
@@ -85,7 +78,6 @@ public class ContentSummaryComputationContext {
     }
 
     // Have we reached the limit?
-    Content.Counts counts = getCounts();
     long currentCount = counts.get(Content.FILE) +
         counts.get(Content.SYMLINK) +
         counts.get(Content.DIRECTORY) +
@@ -127,92 +119,11 @@ public class ContentSummaryComputationContext {
   }
 
   /** Get the content counts */
-  public synchronized Content.Counts getCounts() {
+  public Content.Counts getCounts() {
     return counts;
-  }
-
-  private synchronized void setCounts(Content.Counts counts) {
-    this.counts = counts;
   }
 
   public Content.Counts getSnapshotCounts() {
     return snapshotCounts;
-  }
-
-  private void setSnapshotCounts(Content.Counts snapshotCounts) {
-    this.snapshotCounts = snapshotCounts;
-  }
-
-  /**
-   * If the node is an INodeReference, resolves it to the actual inode.
-   * Snapshot diffs represent renamed / moved files as different
-   * INodeReferences, but the underlying INode it refers to is consistent.
-   *
-   * @param node
-   * @return The referred INode if there is one, else returns the input
-   * unmodified.
-   */
-  private INode resolveINodeReference(INode node) {
-    if (node.isReference() && node instanceof INodeReference) {
-      return ((INodeReference)node).getReferredINode();
-    }
-    return node;
-  }
-
-  /**
-   * Reports that a node is about to be included in this summary. Can be used
-   * either to simply report that a node has been including, or check whether
-   * a node has already been included.
-   *
-   * @param node
-   * @return true if node has already been included
-   */
-  public boolean nodeIncluded(INode node) {
-    INode resolvedNode = resolveINodeReference(node);
-    synchronized (includedNodes) {
-      if (!includedNodes.contains(resolvedNode)) {
-        includedNodes.add(resolvedNode);
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   * Schedules a node that is listed as DELETED in a snapshot's diff to be
-   * included in the summary at the end of computation. See
-   * {@link #tallyDeletedSnapshottedINodes()} for more context.
-   *
-   * @param node
-   */
-  public void reportDeletedSnapshottedNode(INode node) {
-    deletedSnapshottedNodes.add(node);
-  }
-
-  /**
-   * Finalizes the computation by including all nodes that were reported as
-   * deleted by a snapshot but have not been already including due to other
-   * references.
-   * <p>
-   * Nodes that get renamed are listed in the snapshot's diff as both DELETED
-   * under the old name and CREATED under the new name. The computation
-   * relies on nodes to report themselves as being included (via
-   * {@link #nodeIncluded(INode)} as the only reliable way to determine which
-   * nodes were renamed within the tree being summarized and which were
-   * removed (either by deletion or being renamed outside of the tree).
-   */
-  public synchronized void tallyDeletedSnapshottedINodes() {
-    /* Temporarily create a new counts object so these results can then be
-    added to both counts and snapshotCounts */
-    Content.Counts originalCounts = getCounts();
-    setCounts(Content.Counts.newInstance());
-    for (INode node : deletedSnapshottedNodes) {
-      if (!nodeIncluded(node)) {
-        node.computeContentSummary(Snapshot.CURRENT_STATE_ID, this);
-      }
-    }
-    originalCounts.add(getCounts());
-    snapshotCounts.add(getCounts());
-    setCounts(originalCounts);
   }
 }
