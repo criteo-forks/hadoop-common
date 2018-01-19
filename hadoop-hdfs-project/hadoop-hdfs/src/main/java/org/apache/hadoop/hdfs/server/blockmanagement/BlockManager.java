@@ -3664,7 +3664,7 @@ public class BlockManager implements BlockStatsMXBean {
       final int curReplicasDelta, int expectedReplicasDelta) {
     namesystem.writeLock();
     try {
-      if (!namesystem.isPopulatingReplQueues()) {
+      if (!namesystem.isPopulatingReplQueues() || !block.isComplete()) {
         return;
       }
       NumberReplicas repl = countNodes(block);
