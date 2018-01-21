@@ -343,7 +343,6 @@ public abstract class INodeReference extends INode {
   @Override
   public ContentSummaryComputationContext computeContentSummary(int snapshotId,
       ContentSummaryComputationContext summary) {
-    summary.nodeIncluded(this);
     return referred.computeContentSummary(snapshotId, summary);
   }
 
@@ -532,7 +531,6 @@ public abstract class INodeReference extends INode {
     @Override
     public final ContentSummaryComputationContext computeContentSummary(
         int snapshotId, ContentSummaryComputationContext summary) {
-      summary.nodeIncluded(this);
       final int s = snapshotId < lastSnapshotId ? snapshotId : lastSnapshotId;
       //only count diskspace for WithName
       final Quota.Counts q = Quota.Counts.newInstance();
