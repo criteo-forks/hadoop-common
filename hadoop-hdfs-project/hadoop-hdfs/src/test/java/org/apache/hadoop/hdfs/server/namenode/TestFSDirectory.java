@@ -46,10 +46,7 @@ import org.junit.Test;
 
 import com.google.common.collect.Lists;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 /**
  * Test {@link FSDirectory}, the in-memory namespace tree.
@@ -111,6 +108,34 @@ public class TestFSDirectory {
     if (cluster != null) {
       cluster.shutdown();
     }
+  }
+
+  @Test
+  public void testLockFairness() throws IOException {
+    Configuration conf = new Configuration();
+
+    //default value
+    FSDirectory fsdir = new MiniDFSCluster.Builder(conf)
+            .numDataNodes(REPLICATION)
+            .build().getNamesystem().getFSDirectory();
+
+    assertTrue(fsdir.isLockFair());
+
+    //unfair
+    conf.setBoolean("dfs.namenode.fsdirlock.fair", false);
+    fsdir = new MiniDFSCluster.Builder(conf)
+            .numDataNodes(REPLICATION)
+            .build().getNamesystem().getFSDirectory();
+
+    assertFalse(fsdir.isLockFair());
+
+    //fair
+    conf.setBoolean("dfs.namenode.fsdirlock.fair", true);
+    fsdir = new MiniDFSCluster.Builder(conf)
+            .numDataNodes(REPLICATION)
+            .build().getNamesystem().getFSDirectory();
+
+    assertTrue(fsdir.isLockFair());
   }
 
   /** Dump the tree, make some changes, and then dump the tree again. */

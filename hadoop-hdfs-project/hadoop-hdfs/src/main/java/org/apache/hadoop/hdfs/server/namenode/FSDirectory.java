@@ -201,6 +201,10 @@ public class FSDirectory implements Closeable {
     return this.dirLock.getWriteHoldCount();
   }
 
+  public boolean isLockFair(){
+    return this.dirLock.isFair();
+  }
+
   @VisibleForTesting
   public final EncryptionZoneManager ezManager;
 
@@ -211,7 +215,8 @@ public class FSDirectory implements Closeable {
   private final NameCache<ByteArray> nameCache;
 
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
-    this.dirLock = new ReentrantReadWriteLock(true); // fair
+    boolean fair = conf.getBoolean("dfs.namenode.fsdirlock.fair", true);
+    this.dirLock = new ReentrantReadWriteLock(fair);
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir);
     this.isPermissionEnabled = conf.getBoolean(
