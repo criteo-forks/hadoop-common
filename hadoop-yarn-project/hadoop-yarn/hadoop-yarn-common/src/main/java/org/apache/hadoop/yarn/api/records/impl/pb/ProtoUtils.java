@@ -259,6 +259,8 @@ public class ProtoUtils {
    * Log Aggregation Status
    */
   private static final String LOG_AGGREGATION_STATUS_PREFIX = "LOG_";
+  private static final int LOG_AGGREGATION_STATUS_PREFIX_LEN =
+      LOG_AGGREGATION_STATUS_PREFIX.length();
   public static LogAggregationStatusProto convertToProtoFormat(
       LogAggregationStatus e) {
     return LogAggregationStatusProto.valueOf(LOG_AGGREGATION_STATUS_PREFIX
@@ -267,7 +269,7 @@ public class ProtoUtils {
 
   public static LogAggregationStatus convertFromProtoFormat(
       LogAggregationStatusProto e) {
-    return LogAggregationStatus.valueOf(e.name().replace(
-      LOG_AGGREGATION_STATUS_PREFIX, ""));
+    return LogAggregationStatus.valueOf(e.name().substring(
+        LOG_AGGREGATION_STATUS_PREFIX_LEN));
   }
 }
