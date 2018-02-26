@@ -283,16 +283,10 @@ public class BlockRecoveryWorker {
         }
       }
 
-      // If any of the data-nodes failed, the recovery fails, because
-      // we never know the actual state of the replica on failed data-nodes.
-      // The recovery should be started over.
-      if (!failedList.isEmpty()) {
-        StringBuilder b = new StringBuilder();
-        for(DatanodeID id : failedList) {
-          b.append("\n  " + id);
-        }
-        throw new IOException("Cannot recover " + block + ", the following "
-            + failedList.size() + " data-nodes failed {" + b + "\n}");
+      // Abort if all failed.
+      if (successList.isEmpty()) {
+        throw new IOException("Cannot recover " + block
+                + ", the following datanodes failed: " + failedList);
       }
 
       // Notify the name-node about successfully recovered replicas.
