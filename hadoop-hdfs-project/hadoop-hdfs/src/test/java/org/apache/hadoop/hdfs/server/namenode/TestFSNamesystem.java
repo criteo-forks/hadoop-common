@@ -29,6 +29,7 @@ import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
@@ -159,5 +160,17 @@ public class TestFSNamesystem {
     assertTrue(root.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     fsn.imageLoadComplete();
     assertTrue(fsn.isImageLoaded());
+  }
+
+  @Test
+  public void testSafemodeReplicationConf() throws IOException {
+    Configuration conf = new Configuration();
+    FSImage fsImage = Mockito.mock(FSImage.class);
+    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
+    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, 2);
+    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
+    FSNamesystem.SafeModeInfo safemodeInfo = fsn.getSafeModeInfoForTests();
+    assertTrue(safemodeInfo.toString().contains("Minimal replication = 2"));
   }
 }
