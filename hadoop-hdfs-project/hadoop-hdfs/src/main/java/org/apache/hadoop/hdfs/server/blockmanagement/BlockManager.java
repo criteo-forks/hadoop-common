@@ -330,6 +330,10 @@ public class BlockManager implements BlockStatsMXBean {
    */
   private final short minReplicationToBeInMaintenance;
 
+  /** Minimum live replicas for calculating safe block count.
+   */
+  private final short minReplicationSafemode;
+
   public BlockManager(final Namesystem namesystem, final FSClusterStats stats,
       final Configuration conf) throws IOException {
     this.namesystem = namesystem;
@@ -438,6 +442,27 @@ public class BlockManager implements BlockStatsMXBean {
           + " = " + defaultReplication);
     }
     this.minReplicationToBeInMaintenance = (short)minMaintenanceR;
+
+    // DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY is an expert level setting,
+    // setting this lower than the min replication is not recommended
+    // and/or dangerous for production setups.
+    // When it's unset, safeReplication will use dfs.namenode.replication.min
+    final int minSafemodeR =
+            conf.getInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY,
+                    minReplication);
+    if (minSafemodeR < 0) {
+      throw new IOException("Unexpected configuration parameters: "
+              + DFSConfigKeys.DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY
+              + " = " + minSafemodeR + " < 0");
+    }
+    if (minSafemodeR > defaultReplication) {
+      throw new IOException("Unexpected configuration parameters: "
+              + DFSConfigKeys.DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY
+              + " = " + minSafemodeR + " > "
+              + DFSConfigKeys.DFS_REPLICATION_KEY
+              + " = " + defaultReplication);
+    }
+    this.minReplicationSafemode = (short)minMaintenanceR;
 
     this.getBlocksMinBlockSize = conf.getLongBytes(
         DFSConfigKeys.DFS_BALANCER_GETBLOCKS_MIN_BLOCK_SIZE_KEY,
@@ -784,7 +809,7 @@ public class BlockManager implements BlockStatsMXBean {
     // OP_CLOSE edit on the standby).
     namesystem.adjustSafeModeBlockTotals(0, 1);
     namesystem.incrementSafeBlockCount(
-        Math.min(numNodes, minReplication));
+        Math.min(numNodes, minReplicationSafemode));
     
     // replace block in the blocksMap
     return blocksMap.replaceBlock(completeBlock);
