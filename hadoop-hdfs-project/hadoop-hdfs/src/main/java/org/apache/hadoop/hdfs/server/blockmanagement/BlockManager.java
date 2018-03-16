@@ -430,6 +430,10 @@ public class BlockManager implements BlockStatsMXBean {
    */
   private final short minReplicationToBeInMaintenance;
 
+  /** Minimum live replicas for calculating safe block count.
+   */
+  private final short minReplicationSafemode;
+
   /** Storages accessible from multiple DNs. */
   private final ProvidedStorageMap providedStorageMap;
 
@@ -551,6 +555,27 @@ public class BlockManager implements BlockStatsMXBean {
           + " = " + defaultReplication);
     }
     this.minReplicationToBeInMaintenance = (short)minMaintenanceR;
+
+    // DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY is an expert level setting,
+    // setting this lower than the min replication is not recommended
+    // and/or dangerous for production setups.
+    // When it's unset, safeReplication will use dfs.namenode.replication.min
+    final int minSafemodeR =
+            conf.getInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY,
+                    minReplication);
+    if (minSafemodeR < 0) {
+      throw new IOException("Unexpected configuration parameters: "
+              + DFSConfigKeys.DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY
+              + " = " + minSafemodeR + " < 0");
+    }
+    if (minSafemodeR > defaultReplication) {
+      throw new IOException("Unexpected configuration parameters: "
+              + DFSConfigKeys.DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY
+              + " = " + minSafemodeR + " > "
+              + DFSConfigKeys.DFS_REPLICATION_KEY
+              + " = " + defaultReplication);
+    }
+    this.minReplicationSafemode = (short)minMaintenanceR;
 
     long heartbeatIntervalSecs = conf.getTimeDuration(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
@@ -1065,7 +1090,7 @@ public class BlockManager implements BlockStatsMXBean {
     // OP_CLOSE edit on the standby).
     bmSafeMode.adjustBlockTotals(0, 1);
     final int minStorage = curBlock.isStriped() ?
-        ((BlockInfoStriped) curBlock).getRealDataBlockNum() : minReplication;
+        ((BlockInfoStriped) curBlock).getRealDataBlockNum() : minReplicationSafemode;
     bmSafeMode.incrementSafeBlockCount(Math.min(numNodes, minStorage),
         curBlock);
   }
