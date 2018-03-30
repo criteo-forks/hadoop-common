@@ -34,6 +34,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
+import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeFaultInjector;
 import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
@@ -68,7 +71,7 @@ public class TestClientProtocolForPipelineRecovery {
       NamenodeProtocols namenode = cluster.getNameNodeRpc();
 
       /* Test writing to finalized replicas */
-      Path file = new Path("dataprotocol.dat");    
+      Path file = new Path("dataprotocol.dat");
       DFSTestUtil.createFile(fileSys, file, 1L, (short)numDataNodes, 0L);
       // get the first blockid for the file
       ExtendedBlock firstBlock = DFSTestUtil.getFirstBlock(fileSys, file);
@@ -80,7 +83,7 @@ public class TestClientProtocolForPipelineRecovery {
       } catch (IOException e) {
         Assert.assertTrue(e.getMessage().contains("is not under Construction"));
       }
-      
+
       // test getNewStampAndToken on a non-existent block
       try {
         long newBlockId = firstBlock.getBlockId() + 1;
@@ -92,13 +95,13 @@ public class TestClientProtocolForPipelineRecovery {
         Assert.assertTrue(e.getMessage().contains("does not exist"));
       }
 
-      
+
       /* Test RBW replicas */
       // change first block to a RBW
       DFSOutputStream out = null;
       try {
         out = (DFSOutputStream)(fileSys.append(file).
-            getWrappedStream()); 
+            getWrappedStream());
         out.write(1);
         out.hflush();
         FSDataInputStream in = null;
@@ -240,7 +243,7 @@ public class TestClientProtocolForPipelineRecovery {
   }
 
   /**
-   * Test recovery on restart OOB message. It also tests the delivery of 
+   * Test recovery on restart OOB message. It also tests the delivery of
    * OOB ack originating from the primary datanode. Since there is only
    * one node in the cluster, failure of restart-recovery will fail the
    * test.
@@ -272,9 +275,9 @@ public class TestClientProtocolForPipelineRecovery {
       // Wait long enough to receive an OOB ack before closing the file.
       GenericTestUtils.waitForThreadTermination(
           "Async datanode shutdown thread", 100, 10000);
-      // Retart the datanode 
+      // Retart the datanode
       cluster.restartDataNode(0, true);
-      // The following forces a data packet and end of block packets to be sent. 
+      // The following forces a data packet and end of block packets to be sent.
       out.close();
     } finally {
       if (cluster != null) {
@@ -311,10 +314,10 @@ public class TestClientProtocolForPipelineRecovery {
       GenericTestUtils.waitForThreadTermination(
           "Async datanode shutdown thread", 100, 10000);
       // This should succeed without restarting the node. The restart will
-      // expire and regular pipeline recovery will kick in. 
+      // expire and regular pipeline recovery will kick in.
       out.close();
 
-      // At this point there is only one node in the cluster. 
+      // At this point there is only one node in the cluster.
       out = (DFSOutputStream)(fileSys.append(file).
           getWrappedStream());
       out.write(1);

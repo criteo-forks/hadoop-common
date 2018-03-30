@@ -190,8 +190,9 @@ public class BlockInfoUnderConstruction extends BlockInfo {
     int numLocations = targets == null ? 0 : targets.length;
     this.replicas = new ArrayList<ReplicaUnderConstruction>(numLocations);
     for(int i = 0; i < numLocations; i++)
-      replicas.add(
-        new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
+      if (targets[i] != null) {
+        replicas.add(new ReplicaUnderConstruction(this, targets[i], ReplicaState.RBW));
+      }
   }
 
   /**
