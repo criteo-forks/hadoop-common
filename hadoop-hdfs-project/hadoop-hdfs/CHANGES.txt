@@ -2,6 +2,9 @@ Hadoop HDFS Change Log
 
 Criteo Release
 
+   HDFS-10453. ReplicationMonitor thread could stuck for long time due to the
+   race between replication and delete of same file in a large cluster. (Contributed by He Xiaoqiao)
+
    HDFS-8716. Introduce a new config specifically for safe mode block count
    (Chang Li via kihwal)
 
