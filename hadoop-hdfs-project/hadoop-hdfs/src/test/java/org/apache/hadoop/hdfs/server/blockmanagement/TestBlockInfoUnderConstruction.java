@@ -49,35 +49,41 @@ public class TestBlockInfoUnderConstruction {
         new DatanodeStorageInfo[] {s1, s2, s3});
 
     // Recovery attempt #1.
-    DFSTestUtil.resetLastUpdatesWithOffset(dd1, -3 * 1000);
-    DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
-    DFSTestUtil.resetLastUpdatesWithOffset(dd3, -2 * 1000);
-    blockInfo.initializeBlockRecovery(1);
+    long currentTime = System.currentTimeMillis();
+    dd1.setLastUpdate(currentTime - 3 * 1000);
+    dd2.setLastUpdate(currentTime - 1 * 1000);
+    dd3.setLastUpdate(currentTime - 2 * 1000);
+    blockInfo.initializeBlockRecovery(1, true);
     BlockInfoUnderConstruction[] blockInfoRecovery = dd2.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
 
     // Recovery attempt #2.
-    DFSTestUtil.resetLastUpdatesWithOffset(dd1, -2 * 1000);
-    DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
-    DFSTestUtil.resetLastUpdatesWithOffset(dd3, -3 * 1000);
-    blockInfo.initializeBlockRecovery(2);
+    currentTime = System.currentTimeMillis();
+    dd1.setLastUpdate(currentTime - 2 * 1000);
+    dd2.setLastUpdate(currentTime - 1 * 1000);
+    dd3.setLastUpdate(currentTime - 3 * 1000);
+    blockInfo.initializeBlockRecovery(2, true);
     blockInfoRecovery = dd1.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
 
     // Recovery attempt #3.
-    DFSTestUtil.resetLastUpdatesWithOffset(dd1, -2 * 1000);
-    DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
-    DFSTestUtil.resetLastUpdatesWithOffset(dd3, -3 * 1000);
-    blockInfo.initializeBlockRecovery(3);
+    currentTime = System.currentTimeMillis();
+    dd1.setLastUpdate(currentTime - 2 * 1000);
+    dd2.setLastUpdate(currentTime - 1 * 1000);
+    dd3.setLastUpdate(currentTime - 3 * 1000);
+    currentTime = System.currentTimeMillis();
+    blockInfo.initializeBlockRecovery(3, true);
     blockInfoRecovery = dd3.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
 
     // Recovery attempt #4.
     // Reset everything. And again pick DN with most recent heart beat.
-    DFSTestUtil.resetLastUpdatesWithOffset(dd1, -2 * 1000);
-    DFSTestUtil.resetLastUpdatesWithOffset(dd2, -1 * 1000);
-    DFSTestUtil.resetLastUpdatesWithOffset(dd3, 0);
-    blockInfo.initializeBlockRecovery(3);
+    currentTime = System.currentTimeMillis();
+    dd1.setLastUpdate(currentTime - 2 * 1000);
+    dd2.setLastUpdate(currentTime - 1 * 1000);
+    dd3.setLastUpdate(currentTime);
+    currentTime = System.currentTimeMillis();
+    blockInfo.initializeBlockRecovery(3, true);
     blockInfoRecovery = dd3.getLeaseRecoveryCommand(1);
     assertEquals(blockInfoRecovery[0], blockInfo);
   }

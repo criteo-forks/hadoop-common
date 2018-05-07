@@ -41,6 +41,7 @@ import org.apache.hadoop.util.Daemon;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.util.Time;
 
 /**
  * LeaseManager does the lease housekeeping for writing on files.   
@@ -162,6 +163,13 @@ public class LeaseManager {
     leasesById.put(inodeId, lease);
     lease.files.add(inodeId);
     return lease;
+  }
+
+  synchronized void removeLease(long inodeId) {
+    final Lease lease = leasesById.get(inodeId);
+    if (lease != null) {
+      removeLease(lease, inodeId);
+    }
   }
 
   /**
@@ -387,8 +395,21 @@ public class LeaseManager {
           if (!p.startsWith("/")) {
             throw new IOException("Invalid path in the lease " + p);
           }
-          boolean completed = fsnamesystem.internalReleaseLease(
-                  leaseToCheck, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+          final INodeFile lastINode = iip.getLastINode().asFile();
+          if (fsnamesystem.isFileDeleted(lastINode)) {
+            // INode referred by the lease could have been deleted.
+            removeLease(lastINode.getId());
+            continue;
+          }
+          boolean completed = false;
+          try {
+            completed = fsnamesystem.internalReleaseLease(
+                leaseToCheck, p, HdfsServerConstants.NAMENODE_LEASE_HOLDER);
+          } catch (IOException e) {
+            LOG.warn("Cannot release the path " + p + " in the lease "
+                + leaseToCheck + ". It will be retried.", e);
+            continue;
+          }
           if (LOG.isDebugEnabled()) {
             if (completed) {
               LOG.debug("Lease recovery for inode " + id + " is complete. " +
@@ -402,8 +423,8 @@ public class LeaseManager {
             needSync = true;
           }
         } catch (IOException e) {
-          LOG.error("Cannot release the path " + p + " in the lease "
-                  + leaseToCheck, e);
+          LOG.warn("Removing lease with an invalid path: " + p + ","
+              + leaseToCheck, e);
           removing.add(id);
         }
         if (isMaxLockHoldToReleaseLease(start)) {
