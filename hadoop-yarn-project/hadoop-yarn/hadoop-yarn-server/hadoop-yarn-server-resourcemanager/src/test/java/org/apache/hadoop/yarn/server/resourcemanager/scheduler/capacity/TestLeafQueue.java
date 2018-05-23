@@ -133,7 +133,8 @@ public class TestLeafQueue {
     cs.setConf(conf);
 
     csContext = mock(CapacitySchedulerContext.class);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).
         thenReturn(Resources.createResource(GB, 1));
@@ -2328,7 +2329,8 @@ public class TestLeafQueue {
   private CapacitySchedulerContext mockCSContext(
       CapacitySchedulerConfiguration csConf, Resource clusterResource) {
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(new YarnConfiguration());
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getClusterResource()).thenReturn(clusterResource);

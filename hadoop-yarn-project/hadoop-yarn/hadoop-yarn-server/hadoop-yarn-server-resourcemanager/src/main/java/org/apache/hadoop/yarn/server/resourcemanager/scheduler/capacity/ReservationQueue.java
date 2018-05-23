@@ -44,7 +44,8 @@ public class ReservationQueue extends LeafQueue {
   public ReservationQueue(CapacitySchedulerContext cs, String queueName,
       PlanQueue parent) throws IOException {
     super(cs, queueName, parent, null);
-    maxSystemApps = cs.getConfiguration().getMaximumSystemApplications();
+    maxSystemApps = ((CapacitySchedulerConfiguration) cs
+        .getSchedulerConfiguration()).getMaximumSystemApplications();
     // the following parameters are common to all reservation in the plan
     updateQuotas(parent.getUserLimitForReservation(),
         parent.getUserLimitFactor(),

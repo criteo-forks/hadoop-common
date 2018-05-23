@@ -54,7 +54,8 @@ public class PlanQueue extends ParentQueue {
 
     this.schedulerContext = cs;
     // Set the reservation queue attributes for the Plan
-    CapacitySchedulerConfiguration conf = cs.getConfiguration();
+    CapacitySchedulerConfiguration conf =
+        (CapacitySchedulerConfiguration) cs.getSchedulerConfiguration();
     String queuePath = super.getQueuePath();
     int maxAppsForReservation = conf.getMaximumApplicationsPerQueue(queuePath);
     showReservationsAsQueues = conf.getShowReservationAsQueues(queuePath);

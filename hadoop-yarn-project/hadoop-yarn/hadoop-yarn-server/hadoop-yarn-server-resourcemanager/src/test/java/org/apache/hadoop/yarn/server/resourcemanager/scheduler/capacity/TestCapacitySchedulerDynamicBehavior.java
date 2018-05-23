@@ -92,7 +92,8 @@ public class TestCapacitySchedulerDynamicBehavior {
     tcs.checkQueueCapacities(cs, A_CAPACITY, B_CAPACITY);
 
     // Reinitialize and verify all dynamic queued survived
-    CapacitySchedulerConfiguration conf = cs.getConfiguration();
+    CapacitySchedulerConfiguration conf =
+        (CapacitySchedulerConfiguration) cs.getSchedulerConfiguration();
     conf.setCapacity(A, 80f);
     conf.setCapacity(B, 20f);
     cs.reinitialize(conf, rm.getRMContext());

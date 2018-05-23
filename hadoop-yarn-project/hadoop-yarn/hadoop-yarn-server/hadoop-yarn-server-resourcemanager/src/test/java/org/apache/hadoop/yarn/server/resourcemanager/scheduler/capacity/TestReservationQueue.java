@@ -50,7 +50,8 @@ public class TestReservationQueue {
     csConf = new CapacitySchedulerConfiguration();
     YarnConfiguration conf = new YarnConfiguration();
     csContext = mock(CapacitySchedulerContext.class);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).thenReturn(
         Resources.createResource(GB, 1));

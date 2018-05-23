@@ -87,7 +87,10 @@ public class ParentQueue extends AbstractCSQueue {
 
     this.rootQueue = (parent == null);
 
-    float rawCapacity = cs.getConfiguration().getCapacity(getQueuePath());
+    CapacitySchedulerConfiguration csConf =
+        (CapacitySchedulerConfiguration) cs.getSchedulerConfiguration();
+
+    float rawCapacity = csConf.getCapacity(getQueuePath());
 
     if (rootQueue &&
         (rawCapacity != CapacitySchedulerConfiguration.MAXIMUM_CAPACITY_VALUE)) {
@@ -102,19 +105,19 @@ public class ParentQueue extends AbstractCSQueue {
     float absoluteCapacity = parentAbsoluteCapacity * capacity; 
 
     float  maximumCapacity =
-      (float) cs.getConfiguration().getMaximumCapacity(getQueuePath()) / 100;
+      (float) csConf.getMaximumCapacity(getQueuePath()) / 100;
     float absoluteMaxCapacity = 
           CSQueueUtils.computeAbsoluteMaximumCapacity(maximumCapacity, parent);
     
-    QueueState state = cs.getConfiguration().getState(getQueuePath());
+    QueueState state = csConf.getState(getQueuePath());
 
-    Map<AccessType, AccessControlList> acls = 
-      cs.getConfiguration().getAcls(getQueuePath());
+    Map<AccessType, AccessControlList> acls =
+        csConf.getAcls(getQueuePath());
 
     setupQueueConfigs(cs.getClusterResource(), capacity, absoluteCapacity,
         maximumCapacity, absoluteMaxCapacity, state, acls, accessibleLabels,
-        defaultLabelExpression, capacitiyByNodeLabels, maxCapacityByNodeLabels, 
-        cs.getConfiguration().getReservationContinueLook());
+        defaultLabelExpression, capacitiyByNodeLabels, maxCapacityByNodeLabels,
+        csConf.getReservationContinueLook());
     
     this.childQueues = new TreeSet<CSQueue>(queueComparator);
 

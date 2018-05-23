@@ -50,7 +50,8 @@ class FSPreemptionThread extends Thread {
     setName("FSPreemptionThread");
     this.scheduler = scheduler;
     this.context = scheduler.getContext();
-    FairSchedulerConfiguration fsConf = scheduler.getConf();
+    FairSchedulerConfiguration fsConf =
+        (FairSchedulerConfiguration) scheduler.getSchedulerConfiguration();
     context.setPreemptionEnabled();
     context.setPreemptionUtilizationThreshold(
         fsConf.getPreemptionUtilizationThreshold());

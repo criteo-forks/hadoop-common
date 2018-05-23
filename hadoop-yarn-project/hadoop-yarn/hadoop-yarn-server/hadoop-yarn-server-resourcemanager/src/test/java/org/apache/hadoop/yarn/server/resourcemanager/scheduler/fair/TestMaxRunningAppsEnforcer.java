@@ -50,8 +50,8 @@ public class TestMaxRunningAppsEnforcer {
     Configuration conf = new Configuration();
     clock = new ControlledClock();
     scheduler = mock(FairScheduler.class);
-    when(scheduler.getConf()).thenReturn(
-        new FairSchedulerConfiguration(conf));
+    when((FairSchedulerConfiguration) scheduler.getSchedulerConfiguration())
+        .thenReturn(new FairSchedulerConfiguration(conf));
     when(scheduler.getClock()).thenReturn(clock);
     AllocationConfiguration allocConf = new AllocationConfiguration(
         conf);

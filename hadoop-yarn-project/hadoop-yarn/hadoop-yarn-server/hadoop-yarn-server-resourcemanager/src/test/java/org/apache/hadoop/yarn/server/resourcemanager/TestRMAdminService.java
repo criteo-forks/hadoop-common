@@ -116,11 +116,13 @@ public class TestRMAdminService {
 
     CapacityScheduler cs =
         (CapacityScheduler) rm.getRMContext().getScheduler();
-    int maxAppsBefore = cs.getConfiguration().getMaximumSystemApplications();
+    CapacitySchedulerConfiguration csConf =
+        (CapacitySchedulerConfiguration) cs.getSchedulerConfiguration();
+    int maxAppsBefore = csConf.getMaximumSystemApplications();
 
     try {
       rm.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
-      Assert.assertEquals(maxAppsBefore, cs.getConfiguration()
+      Assert.assertEquals(maxAppsBefore, csConf
           .getMaximumSystemApplications());
     } catch (Exception ex) {
       fail("Using localConfigurationProvider. Should not get any exception.");
@@ -146,7 +148,9 @@ public class TestRMAdminService {
 
     CapacityScheduler cs =
         (CapacityScheduler) rm.getRMContext().getScheduler();
-    int maxAppsBefore = cs.getConfiguration().getMaximumSystemApplications();
+    int maxAppsBefore =
+        ((CapacitySchedulerConfiguration) cs.getSchedulerConfiguration())
+            .getMaximumSystemApplications();
 
     CapacitySchedulerConfiguration csConf =
         new CapacitySchedulerConfiguration();
@@ -155,7 +159,9 @@ public class TestRMAdminService {
 
     rm.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
 
-    int maxAppsAfter = cs.getConfiguration().getMaximumSystemApplications();
+    int maxAppsAfter =
+        ((CapacitySchedulerConfiguration) cs.getSchedulerConfiguration())
+            .getMaximumSystemApplications();
     Assert.assertEquals(maxAppsAfter, 5000);
     Assert.assertTrue(maxAppsAfter != maxAppsBefore);
   }
@@ -567,15 +573,15 @@ public class TestRMAdminService {
       rm1.adminService.refreshQueues(RefreshQueuesRequest.newInstance());
 
       int maxApps =
-          ((CapacityScheduler) rm1.getRMContext().getScheduler())
-              .getConfiguration().getMaximumSystemApplications();
+          ((CapacitySchedulerConfiguration) rm1.getRMContext().getScheduler()
+              .getSchedulerConfiguration()).getMaximumSystemApplications();
       Assert.assertEquals(maxApps, 5000);
 
       // Before failover happens, the maxApps is
       // still the default value on the standby rm : rm2
       int maxAppsBeforeFailOver =
-          ((CapacityScheduler) rm2.getRMContext().getScheduler())
-              .getConfiguration().getMaximumSystemApplications();
+          ((CapacitySchedulerConfiguration) rm2.getRMContext().getScheduler()
+              .getSchedulerConfiguration()).getMaximumSystemApplications();
       Assert.assertEquals(maxAppsBeforeFailOver, 10000);
 
       // Do the failover
@@ -587,8 +593,8 @@ public class TestRMAdminService {
           == HAServiceState.ACTIVE);
 
       int maxAppsAfter =
-          ((CapacityScheduler) rm2.getRMContext().getScheduler())
-              .getConfiguration().getMaximumSystemApplications();
+          ((CapacitySchedulerConfiguration) rm2.getRMContext().getScheduler()
+              .getSchedulerConfiguration()).getMaximumSystemApplications();
 
       Assert.assertEquals(maxAppsAfter, 5000);
     } finally {
@@ -697,7 +703,7 @@ public class TestRMAdminService {
       // validate values for queue configuration
       CapacityScheduler cs =
           (CapacityScheduler) resourceManager.getRMContext().getScheduler();
-      int maxAppsAfter = cs.getConfiguration().getMaximumSystemApplications();
+      int maxAppsAfter = ((CapacitySchedulerConfiguration) cs.getSchedulerConfiguration()).getMaximumSystemApplications();
       Assert.assertEquals(maxAppsAfter, 5000);
 
       // verify service Acls for AdminService

@@ -129,11 +129,14 @@ public class LeafQueue extends AbstractCSQueue {
             Resources.subtract(maximumAllocation, minimumAllocation), 
             maximumAllocation);
 
+    CapacitySchedulerConfiguration csConf =
+        (CapacitySchedulerConfiguration) cs.getSchedulerConfiguration();
+
     float capacity = getCapacityFromConf();
     float absoluteCapacity = parent.getAbsoluteCapacity() * capacity;
 
     float maximumCapacity = 
-        (float)cs.getConfiguration().getMaximumCapacity(getQueuePath()) / 100;
+        (float)csConf.getMaximumCapacity(getQueuePath()) / 100;
     float absoluteMaxCapacity = 
         CSQueueUtils.computeAbsoluteMaximumCapacity(maximumCapacity, parent);
         
@@ -141,20 +144,20 @@ public class LeafQueue extends AbstractCSQueue {
     // max avail value during assignContainers
     absoluteMaxAvailCapacity = absoluteMaxCapacity;
 
-    int userLimit = cs.getConfiguration().getUserLimit(getQueuePath());
-    float userLimitFactor = 
-      cs.getConfiguration().getUserLimitFactor(getQueuePath());
+    int userLimit = csConf.getUserLimit(getQueuePath());
+    float userLimitFactor =
+        csConf.getUserLimitFactor(getQueuePath());
 
     int maxApplications =
-        cs.getConfiguration().getMaximumApplicationsPerQueue(getQueuePath());
+        csConf.getMaximumApplicationsPerQueue(getQueuePath());
     if (maxApplications < 0) {
-      int maxSystemApps = cs.getConfiguration().getMaximumSystemApplications();
+      int maxSystemApps = csConf.getMaximumSystemApplications();
       maxApplications = (int)(maxSystemApps * absoluteCapacity);
     }
     maxApplicationsPerUser = 
       (int)(maxApplications * (userLimit / 100.0f) * userLimitFactor);
 
-    float maxAMResourcePerQueuePercent = cs.getConfiguration()
+    float maxAMResourcePerQueuePercent = csConf
         .getMaximumApplicationMasterResourcePerQueuePercent(getQueuePath());
     int maxActiveApplications = 
         CSQueueUtils.computeMaxActiveApplications(
@@ -170,19 +173,19 @@ public class LeafQueue extends AbstractCSQueue {
         CSQueueUtils.computeMaxActiveApplicationsPerUser(
             maxActiveAppsUsingAbsCap, userLimit, userLimitFactor);
 
-    QueueState state = cs.getConfiguration().getState(getQueuePath());
+    QueueState state = csConf.getState(getQueuePath());
 
-    Map<AccessType, AccessControlList> acls = 
-      cs.getConfiguration().getAcls(getQueuePath());
+    Map<AccessType, AccessControlList> acls =
+        csConf.getAcls(getQueuePath());
 
     setupQueueConfigs(cs.getClusterResource(), capacity, absoluteCapacity,
         maximumCapacity, absoluteMaxCapacity, userLimit, userLimitFactor,
         maxApplications, maxAMResourcePerQueuePercent, maxApplicationsPerUser,
-        maxActiveApplications, maxActiveApplicationsPerUser, state, acls, cs
-            .getConfiguration().getNodeLocalityDelay(), accessibleLabels,
+        maxActiveApplications, maxActiveApplicationsPerUser, state, acls,
+            csConf.getNodeLocalityDelay(), accessibleLabels,
         defaultLabelExpression, this.capacitiyByNodeLabels,
         this.maxCapacityByNodeLabels,
-        cs.getConfiguration().getReservationContinueLook());
+        csConf.getReservationContinueLook());
 
     if(LOG.isDebugEnabled()) {
       LOG.debug("LeafQueue:" + " name=" + queueName
@@ -198,7 +201,9 @@ public class LeafQueue extends AbstractCSQueue {
   
   // externalizing in method, to allow overriding
   protected float getCapacityFromConf() {
-    return (float)scheduler.getConfiguration().getCapacity(getQueuePath()) / 100;
+    CapacitySchedulerConfiguration csConf =
+        (CapacitySchedulerConfiguration) scheduler.getSchedulerConfiguration();
+    return (float)csConf.getCapacity(getQueuePath()) / 100;
   }
 
   protected synchronized void setupQueueConfigs(

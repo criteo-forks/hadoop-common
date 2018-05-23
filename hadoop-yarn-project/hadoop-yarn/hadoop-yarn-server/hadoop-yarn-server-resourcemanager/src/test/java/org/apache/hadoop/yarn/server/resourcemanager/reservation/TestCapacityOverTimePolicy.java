@@ -76,7 +76,8 @@ public class TestCapacityOverTimePolicy {
     ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
     CapacityScheduler scheduler = testUtil.mockCapacityScheduler(totCont);
     String reservationQ = testUtil.getFullReservationQueueName();
-    CapacitySchedulerConfiguration capConf = scheduler.getConfiguration();
+    CapacitySchedulerConfiguration capConf =
+        (CapacitySchedulerConfiguration) scheduler.getSchedulerConfiguration();
     capConf.setReservationWindow(reservationQ, timeWindow);
     capConf.setInstantaneousMaxCapacity(reservationQ, instConstraint);
     capConf.setAverageCapacity(reservationQ, avgConstraint);

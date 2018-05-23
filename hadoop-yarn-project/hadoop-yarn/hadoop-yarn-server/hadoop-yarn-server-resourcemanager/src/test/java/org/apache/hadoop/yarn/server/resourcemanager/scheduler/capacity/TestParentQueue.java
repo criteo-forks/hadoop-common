@@ -82,7 +82,8 @@ public class TestParentQueue {
     
     csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConf()).thenReturn(conf);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getMinimumResourceCapability()).thenReturn(
         Resources.createResource(GB, 1));
     when(csContext.getMaximumResourceCapability()).thenReturn(

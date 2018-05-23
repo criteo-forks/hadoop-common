@@ -69,11 +69,13 @@ public class TestCapacityReservationSystem {
     }
     CapacityReservationSystem reservationSystem =
         new CapacityReservationSystem();
-    CapacitySchedulerConfiguration conf = capScheduler.getConfiguration();
+    CapacitySchedulerConfiguration conf =
+        (CapacitySchedulerConfiguration) capScheduler
+            .getSchedulerConfiguration();
     RMContext mockContext = capScheduler.getRMContext();
     reservationSystem.setRMContext(mockContext);
     try {
-      reservationSystem.reinitialize(capScheduler.getConfiguration(),
+      reservationSystem.reinitialize(capScheduler.getSchedulerConfiguration(),
           mockContext);
     } catch (YarnException e) {
       Assert.fail(e.getMessage());

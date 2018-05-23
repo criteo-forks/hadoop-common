@@ -51,7 +51,8 @@ public class TestQueueManager {
     allocConf.configuredQueues.get(FSQueueType.PARENT).add("root.test.childB");
 
     when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
-    when(scheduler.getConf()).thenReturn(conf);
+    when((FairSchedulerConfiguration) scheduler
+        .getSchedulerConfiguration()).thenReturn(conf);
 
     SystemClock clock = new SystemClock();
 

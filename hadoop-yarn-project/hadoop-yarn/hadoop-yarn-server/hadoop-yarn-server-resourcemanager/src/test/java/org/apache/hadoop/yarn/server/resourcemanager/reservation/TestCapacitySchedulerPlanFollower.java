@@ -104,7 +104,8 @@ public class TestCapacitySchedulerPlanFollower {
     scheduler.setConf(csConf);
 
     csContext = mock(CapacitySchedulerContext.class);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(csConf);
     when(csContext.getMinimumResourceCapability()).thenReturn(minAlloc);
     when(csContext.getMaximumResourceCapability()).thenReturn(maxAlloc);
@@ -133,7 +134,8 @@ public class TestCapacitySchedulerPlanFollower {
     mAgent = mock(ReservationAgent.class);
 
     String reservationQ = testUtil.getFullReservationQueueName();
-    CapacitySchedulerConfiguration csConf = scheduler.getConfiguration();
+    CapacitySchedulerConfiguration csConf =
+        (CapacitySchedulerConfiguration) scheduler.getSchedulerConfiguration();
     csConf.setReservationWindow(reservationQ, 20L);
     csConf.setMaximumCapacity(reservationQ, 40);
     csConf.setAverageCapacity(reservationQ, 20);

@@ -70,7 +70,7 @@ public class CapacityReservationSystem extends AbstractReservationSystem {
   protected Plan initializePlan(String planQueueName) throws YarnException {
     SharingPolicy adPolicy = getAdmissionPolicy(planQueueName);
     String planQueuePath = capScheduler.getQueue(planQueueName).getQueuePath();
-    adPolicy.init(planQueuePath, capScheduler.getConfiguration());
+    adPolicy.init(planQueuePath, capScheduler.getSchedulerConfiguration());
     CSQueue planQueue = capScheduler.getQueue(planQueueName);
     // Calculate the max plan capacity
     Resource minAllocation = capScheduler.getMinimumResourceCapability();
@@ -82,8 +82,9 @@ public class CapacityReservationSystem extends AbstractReservationSystem {
         new InMemoryPlan(capScheduler.getRootQueueMetrics(), adPolicy,
             getAgent(planQueuePath), totCap, planStepSize, rescCalc,
             minAllocation, capScheduler.getMaximumResourceCapability(),
-            planQueueName, getReplanner(planQueuePath), capScheduler
-                .getConfiguration().getMoveOnExpiry(planQueuePath));
+            planQueueName, getReplanner(planQueuePath),
+            ((CapacitySchedulerConfiguration) capScheduler
+                .getSchedulerConfiguration()).getMoveOnExpiry(planQueuePath));
     LOG.info("Intialized plan {0} based on reservable queue {1}",
         plan.toString(), planQueueName);
     return plan;
@@ -92,7 +93,8 @@ public class CapacityReservationSystem extends AbstractReservationSystem {
   @Override
   protected Planner getReplanner(String planQueueName) {
     CapacitySchedulerConfiguration capSchedulerConfig =
-        capScheduler.getConfiguration();
+        (CapacitySchedulerConfiguration) capScheduler
+            .getSchedulerConfiguration();
     String plannerClassName = capSchedulerConfig.getReplanner(planQueueName);
     LOG.info("Using Replanner: " + plannerClassName + " for queue: "
         + planQueueName);
@@ -117,7 +119,8 @@ public class CapacityReservationSystem extends AbstractReservationSystem {
   @Override
   protected ReservationAgent getAgent(String queueName) {
     CapacitySchedulerConfiguration capSchedulerConfig =
-        capScheduler.getConfiguration();
+        (CapacitySchedulerConfiguration) capScheduler
+            .getSchedulerConfiguration();
     String agentClassName = capSchedulerConfig.getReservationAgent(queueName);
     LOG.info("Using Agent: " + agentClassName + " for queue: " + queueName);
     try {
@@ -137,7 +140,8 @@ public class CapacityReservationSystem extends AbstractReservationSystem {
   @Override
   protected SharingPolicy getAdmissionPolicy(String queueName) {
     CapacitySchedulerConfiguration capSchedulerConfig =
-        capScheduler.getConfiguration();
+        (CapacitySchedulerConfiguration) capScheduler
+            .getSchedulerConfiguration();
     String admissionPolicyClassName =
         capSchedulerConfig.getReservationAdmissionPolicy(queueName);
     LOG.info("Using AdmissionPolicy: " + admissionPolicyClassName

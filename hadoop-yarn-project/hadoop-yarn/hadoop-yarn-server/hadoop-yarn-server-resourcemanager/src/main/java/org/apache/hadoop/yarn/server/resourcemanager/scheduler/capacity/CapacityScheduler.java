@@ -251,9 +251,9 @@ public class CapacityScheduler extends
   public CSQueue getRootQueue() {
     return root;
   }
-  
+
   @Override
-  public CapacitySchedulerConfiguration getConfiguration() {
+  public Configuration getSchedulerConfiguration() {
     return conf;
   }
 

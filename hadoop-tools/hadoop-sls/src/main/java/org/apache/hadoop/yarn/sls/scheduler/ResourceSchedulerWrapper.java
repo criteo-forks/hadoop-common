@@ -938,4 +938,11 @@ public class ResourceSchedulerWrapper
       ContainerStatus containerStatus, RMContainerEventType event) {
     // do nothing
   }
+
+  @Override
+  public Configuration getSchedulerConfiguration() {
+    if (scheduler == null)
+      return new Configuration();
+    return scheduler.getSchedulerConfiguration();
+  }
 }
