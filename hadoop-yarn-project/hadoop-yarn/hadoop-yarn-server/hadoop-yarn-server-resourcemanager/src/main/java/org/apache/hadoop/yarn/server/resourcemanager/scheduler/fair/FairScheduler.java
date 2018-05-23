@@ -258,6 +258,9 @@ public class FairScheduler extends
     return conf;
   }
 
+  @Override
+  public Configuration getSchedulerConfiguration() { return this.conf; }
+
   public int getNumNodesInRack(String rackName) {
     return nodeTracker.nodeCount(rackName);
   }

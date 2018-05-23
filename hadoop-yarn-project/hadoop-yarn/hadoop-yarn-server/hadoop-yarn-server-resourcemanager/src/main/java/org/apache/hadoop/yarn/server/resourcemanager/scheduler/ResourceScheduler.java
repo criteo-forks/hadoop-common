@@ -33,7 +33,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.Recoverable;
  */
 @LimitedPrivate("yarn")
 @Evolving
-public interface ResourceScheduler extends YarnScheduler, Recoverable {
+public interface ResourceScheduler extends YarnScheduler, Recoverable, SchedulerConfiguration {
 
   /**
    * Set RMContext for <code>ResourceScheduler</code>.

@@ -1010,23 +1010,27 @@ public class ResourceManager extends CompositeService implements Recoverable {
       }
     }
 
+    // Include scheduler config values (if they exist) into the config exposed to the web app
+    Configuration webConf = new Configuration(conf);
+    webConf.addResource(scheduler.getSchedulerConfiguration());
+
     Builder<ApplicationMasterService> builder = 
         WebApps
             .$for("cluster", ApplicationMasterService.class, masterService,
                 "ws")
-            .with(conf)
+            .with(webConf)
             .withHttpSpnegoPrincipalKey(
                 YarnConfiguration.RM_WEBAPP_SPNEGO_USER_NAME_KEY)
             .withHttpSpnegoKeytabKey(
                 YarnConfiguration.RM_WEBAPP_SPNEGO_KEYTAB_FILE_KEY)
             .at(webAppAddress);
-    String proxyHostAndPort = WebAppUtils.getProxyHostAndPort(conf);
-    if(WebAppUtils.getResolvedRMWebAppURLWithoutScheme(conf).
+    String proxyHostAndPort = WebAppUtils.getProxyHostAndPort(webConf);
+    if(WebAppUtils.getResolvedRMWebAppURLWithoutScheme(webConf).
         equals(proxyHostAndPort)) {
-      if (HAUtil.isHAEnabled(conf)) {
-        fetcher = new AppReportFetcher(conf);
+      if (HAUtil.isHAEnabled(webConf)) {
+        fetcher = new AppReportFetcher(webConf);
       } else {
-        fetcher = new AppReportFetcher(conf, getClientRMService());
+        fetcher = new AppReportFetcher(webConf, getClientRMService());
       }
       builder.withServlet(ProxyUriUtils.PROXY_SERVLET_NAME,
           ProxyUriUtils.PROXY_PATH_SPEC, WebAppProxyServlet.class);

@@ -255,6 +255,9 @@ public class FifoScheduler extends
   public synchronized void setConf(Configuration conf) {
     this.conf = conf;
   }
+
+  @Override
+  public Configuration getSchedulerConfiguration() { return this.conf; }
   
   private void validateConf(Configuration conf) {
     // validate scheduler memory allocation setting
