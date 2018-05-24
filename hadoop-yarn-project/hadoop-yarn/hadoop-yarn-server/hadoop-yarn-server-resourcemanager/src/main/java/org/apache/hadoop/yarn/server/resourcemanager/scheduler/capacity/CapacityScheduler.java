@@ -258,6 +258,11 @@ public class CapacityScheduler extends
   }
 
   @Override
+  public Configuration getSchedulerConfiguration() {
+    return conf;
+  }
+
+  @Override
   public synchronized RMContainerTokenSecretManager 
   getContainerTokenSecretManager() {
     return this.rmContext.getContainerTokenSecretManager();
