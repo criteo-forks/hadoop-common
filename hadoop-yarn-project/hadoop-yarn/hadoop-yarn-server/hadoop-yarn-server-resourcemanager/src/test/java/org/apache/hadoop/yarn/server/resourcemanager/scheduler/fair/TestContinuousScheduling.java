@@ -386,6 +386,7 @@ public class TestContinuousScheduling extends FairSchedulerTestBase {
 
   private void triggerSchedulingAttempt() throws InterruptedException {
     Thread.sleep(
-        2 * scheduler.getConf().getContinuousSchedulingSleepMs());
+        2 * ((FairSchedulerConfiguration) scheduler
+            .getSchedulerConfiguration()).getContinuousSchedulingSleepMs());
   }
 }

@@ -94,16 +94,18 @@ public abstract class AbstractCSQueue implements CSQueue {
     this.parent = parent;
     this.queueName = queueName;
     this.resourceCalculator = cs.getResourceCalculator();
-    
+
+    CapacitySchedulerConfiguration csConf =
+        (CapacitySchedulerConfiguration) cs.getSchedulerConfiguration();
     // must be called after parent and queueName is set
     this.metrics = old != null ? old.getMetrics() :
         QueueMetrics.forQueue(getQueuePath(), parent,
-            cs.getConfiguration().getEnableUserMetrics(),
+            csConf.getEnableUserMetrics(),
             cs.getConf());
     
     // get labels
-    this.accessibleLabels = cs.getConfiguration().getAccessibleNodeLabels(getQueuePath());
-    this.defaultLabelExpression = cs.getConfiguration()
+    this.accessibleLabels = csConf.getAccessibleNodeLabels(getQueuePath());
+    this.defaultLabelExpression = csConf
         .getDefaultNodeLabelExpression(getQueuePath());
 
     // inherit from parent if labels not set
@@ -121,12 +123,12 @@ public abstract class AbstractCSQueue implements CSQueue {
     
     // set capacity by labels
     capacitiyByNodeLabels =
-        cs.getConfiguration().getNodeLabelCapacities(getQueuePath(), accessibleLabels,
+        csConf.getNodeLabelCapacities(getQueuePath(), accessibleLabels,
             labelManager);
 
     // set maximum capacity by labels
     maxCapacityByNodeLabels =
-        cs.getConfiguration().getMaximumNodeLabelCapacities(getQueuePath(),
+        csConf.getMaximumNodeLabelCapacities(getQueuePath(),
             accessibleLabels, labelManager);
     queueEntity = new PrivilegedEntity(EntityType.QUEUE, getQueuePath());
     authorizer = YarnAuthorizationProvider.getInstance(cs.getConf());

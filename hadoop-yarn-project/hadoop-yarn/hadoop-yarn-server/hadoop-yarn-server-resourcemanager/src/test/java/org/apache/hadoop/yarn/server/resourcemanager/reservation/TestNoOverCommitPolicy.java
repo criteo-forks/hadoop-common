@@ -62,7 +62,8 @@ public class TestNoOverCommitPolicy {
     ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
     CapacityScheduler scheduler = testUtil.mockCapacityScheduler(totCont);
     String reservationQ = testUtil.getFullReservationQueueName();
-    CapacitySchedulerConfiguration capConf = scheduler.getConfiguration();
+    CapacitySchedulerConfiguration capConf =
+        (CapacitySchedulerConfiguration) scheduler.getSchedulerConfiguration();
     NoOverCommitPolicy policy = new NoOverCommitPolicy();
     policy.init(reservationQ, capConf);
 

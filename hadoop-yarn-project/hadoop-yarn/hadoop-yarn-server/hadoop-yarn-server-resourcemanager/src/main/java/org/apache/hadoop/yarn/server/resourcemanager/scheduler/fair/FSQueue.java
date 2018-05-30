@@ -69,7 +69,9 @@ public abstract class FSQueue implements Queue, Schedulable {
   public FSQueue(String name, FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
     this.scheduler = scheduler;
-    this.metrics = FSQueueMetrics.forQueue(getName(), parent, true, scheduler.getConf());
+    this.metrics = FSQueueMetrics
+        .forQueue(getName(), parent,
+            true, scheduler.getSchedulerConfiguration());
     metrics.setMinShare(getMinShare());
     metrics.setMaxShare(getMaxShare());
 

@@ -62,7 +62,8 @@ public class TestCSQueueUtils {
   
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConf()).thenReturn(conf);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getClusterResource()).thenReturn(clusterResource);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getMinimumResourceCapability()).
@@ -105,7 +106,8 @@ public class TestCSQueueUtils {
     
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConf()).thenReturn(conf);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getClusterResource()).thenReturn(clusterResource);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getMinimumResourceCapability()).
@@ -151,7 +153,8 @@ public class TestCSQueueUtils {
     
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConf()).thenReturn(conf);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getClusterResource()).thenReturn(clusterResource);
     when(csContext.getResourceCalculator()).thenReturn(resourceCalculator);
     when(csContext.getMinimumResourceCapability()).

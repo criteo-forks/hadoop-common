@@ -86,7 +86,8 @@ public class TestApplicationLimits {
 
 
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).
         thenReturn(Resources.createResource(GB, 1));
@@ -164,7 +165,8 @@ public class TestApplicationLimits {
     YarnConfiguration conf = new YarnConfiguration();
     
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).
         thenReturn(Resources.createResource(GB, 1));
@@ -478,7 +480,8 @@ public class TestApplicationLimits {
     YarnConfiguration conf = new YarnConfiguration();
     
     CapacitySchedulerContext csContext = mock(CapacitySchedulerContext.class);
-    when(csContext.getConfiguration()).thenReturn(csConf);
+    when((CapacitySchedulerConfiguration) csContext
+        .getSchedulerConfiguration()).thenReturn(csConf);
     when(csContext.getConf()).thenReturn(conf);
     when(csContext.getMinimumResourceCapability()).
         thenReturn(Resources.createResource(GB));

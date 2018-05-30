@@ -73,7 +73,8 @@ public class TestGreedyReservationAgent {
     ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
     CapacityScheduler scheduler = testUtil.mockCapacityScheduler(125);
     String reservationQ = testUtil.getFullReservationQueueName();
-    CapacitySchedulerConfiguration capConf = scheduler.getConfiguration();
+    CapacitySchedulerConfiguration capConf =
+        (CapacitySchedulerConfiguration) scheduler.getSchedulerConfiguration();
     capConf.setReservationWindow(reservationQ, timeWindow);
     capConf.setMaximumCapacity(reservationQ, 100);
     capConf.setAverageCapacity(reservationQ, 100);
@@ -549,7 +550,8 @@ public class TestGreedyReservationAgent {
     ReservationSystemTestUtil testUtil = new ReservationSystemTestUtil();
     CapacityScheduler scheduler = testUtil.mockCapacityScheduler(500 * 100);
     String reservationQ = testUtil.getFullReservationQueueName();
-    CapacitySchedulerConfiguration capConf = scheduler.getConfiguration();
+    CapacitySchedulerConfiguration capConf =
+        (CapacitySchedulerConfiguration) scheduler.getSchedulerConfiguration();
     capConf.setReservationWindow(reservationQ, timeWindow);
     capConf.setMaximumCapacity(reservationQ, 100);
     capConf.setAverageCapacity(reservationQ, 100);

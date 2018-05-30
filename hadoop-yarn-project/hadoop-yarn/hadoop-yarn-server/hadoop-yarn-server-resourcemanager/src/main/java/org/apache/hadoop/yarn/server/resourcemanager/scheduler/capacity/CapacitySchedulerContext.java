@@ -20,10 +20,12 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import java.util.Comparator;
 
+import java.util.concurrent.ScheduledExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
@@ -32,9 +34,8 @@ import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 /**
  * Read-only interface to {@link CapacityScheduler} context.
  */
-public interface CapacitySchedulerContext {
-  CapacitySchedulerConfiguration getConfiguration();
-  
+public interface CapacitySchedulerContext extends SchedulerConfiguration {
+
   Resource getMinimumResourceCapability();
 
   Resource getMaximumResourceCapability();

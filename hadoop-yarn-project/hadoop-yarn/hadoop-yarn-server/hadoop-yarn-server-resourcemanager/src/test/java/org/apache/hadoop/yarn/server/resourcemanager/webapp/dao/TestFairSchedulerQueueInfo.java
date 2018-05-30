@@ -41,7 +41,8 @@ public class TestFairSchedulerQueueInfo {
     FairScheduler scheduler = mock(FairScheduler.class);
     AllocationConfiguration allocConf = new AllocationConfiguration(conf);
     when(scheduler.getAllocationConfiguration()).thenReturn(allocConf);
-    when(scheduler.getConf()).thenReturn(conf);
+    when((FairSchedulerConfiguration) scheduler
+        .getSchedulerConfiguration()).thenReturn(conf);
     when(scheduler.getClusterResource()).thenReturn(Resource.newInstance(1, 1));
     SystemClock clock = new SystemClock();
     when(scheduler.getClock()).thenReturn(clock);
