@@ -39,12 +39,18 @@
 
   <property name="maven2.pattern.ext"
     value="${maven2.pattern}.[ext]"/>
+  <property name="criteo.cloudera"
+            value="http://nexus.criteo.prod/content/repositories/cloudera/"
+            override="false" />
+  <property name="criteo.cloudera_repos"
+            value="http://nexus.criteo.prod/content/repositories/cloudera_repos/"
+            override="false" />
   <property name="cdh.releases"
             value="https://repository.cloudera.com/artifactory/cdh-releases-rcs/"
             override="false" />
   <property name="ext.releases"
             value="http://repository.cloudera.com/artifactory/ext-release-local/"
-            override="false" />
+             override="false" />
   <property name="snapshots.cloudera.com"
             value="https://repository.cloudera.com/artifactory/libs-snapshot-local/"
             override="false"/>
@@ -72,6 +78,16 @@
       pattern="${maven2.pattern.ext}"
       m2compatible="true"
       />
+    <ibiblio name="criteo.cloudera"
+      root="${criteo.cloudera}"
+      pattern="${maven2.pattern.ext}"
+      m2compatible="true"
+      />
+    <ibiblio name="criteo.cloudera_repos"
+      root="${criteo.cloudera_repos}"
+      pattern="${maven2.pattern.ext}"
+      m2compatible="true"
+      />
     <ibiblio name="ext-releases"
       root="${ext.releases}"
       pattern="${maven2.pattern.ext}"
@@ -90,6 +106,8 @@
       <resolver ref="local"/>
       <resolver ref="maven2"/>
       <resolver ref="cdh-releases"/>
+      <resolver ref="criteo.cloudera"/>
+      <resolver ref="criteo.cloudera_repos"/>
       <resolver ref="cloudera-snapshot"/> 
     </chain>
     <chain name="internal">
@@ -99,11 +117,15 @@
     <chain name="external">
       <resolver ref="maven2"/>
       <resolver ref="cdh-releases"/>
+      <resolver ref="criteo.cloudera"/>
+      <resolver ref="criteo.cloudera_repos"/>
     </chain>
     <chain name="external-and-snapshots">
       <resolver ref="reactor-repo"/>
       <resolver ref="maven2"/>
       <resolver ref="cdh-releases"/>
+      <resolver ref="criteo.cloudera"/>
+      <resolver ref="criteo.cloudera_repos"/>
       <resolver ref="apache-snapshot"/>
       <resolver ref="cloudera-snapshot"/> 
     </chain>
