@@ -2,6 +2,10 @@ Hadoop YARN Change Log
 
 Criteo Release
 
+   YARN-8559. Expose scheduling configuration info in Resource Manager's /conf 
+   endpoint.  Please see commit beda7203da3ee1009cf8ea7d92a89b6837267566 for
+   LAKECOMP-498 for the actual patch.
+
    YARN-4250. NPE in AppSchedulingInfo#isRequestLabelChanged.
    (Brahma Reddy Battula via rohithsharmaks)
 
