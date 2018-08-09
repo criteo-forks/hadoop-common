@@ -31,6 +31,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RemoteException;
+import org.apache.hadoop.ipc.StandbyException;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.io.retry.MultiException;
@@ -118,9 +120,8 @@ public class RequestHedgingProxyProvider<T> extends
             return retVal;
           } catch (Exception ex) {
             ProxyInfo<T> tProxyInfo = proxyMap.get(callResultFuture);
-            LOG.warn("Invocation returned exception on "
-                    + "[" + tProxyInfo.proxyInfo + "]");
-            badResults.put(tProxyInfo.proxyInfo, ex);
+            logProxyException(ex, tProxyInfo.proxyInfo);
+            badResults.put(tProxyInfo.proxyInfo, unwrapException(ex));
             LOG.trace("Unsuccessful invocation on [{}]", tProxyInfo.proxyInfo);
             numAttempts--;
           }
@@ -183,5 +184,61 @@ public class RequestHedgingProxyProvider<T> extends
   public synchronized void performFailover(T currentProxy) {
     toIgnore = successfulProxy.proxyInfo;
     successfulProxy = null;
+  }
+
+  /**
+   * Check the exception returned by the proxy log a warning message if it's
+   * not a StandbyException (expected exception).
+   * @param ex Exception to evaluate.
+   * @param proxyInfo Information of the proxy reporting the exception.
+   */
+  private void logProxyException(Exception ex, String proxyInfo) {
+    if (isStandbyException(ex)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Invocation returned standby exception on [" +
+            proxyInfo + "]");
+      }
+    } else {
+      LOG.warn("Invocation returned exception on [" + proxyInfo + "]");
+    }
+  }
+
+  /**
+   * Check if the returned exception is caused by an standby namenode.
+   * @param ex Exception to check.
+   * @return If the exception is caused by an standby namenode.
+   */
+  private boolean isStandbyException(Exception ex) {
+    Exception exception = unwrapException(ex);
+    if (exception instanceof RemoteException) {
+      return ((RemoteException) exception).unwrapRemoteException()
+          instanceof StandbyException;
+    }
+    return false;
+  }
+
+  /**
+   * Unwraps the exception. <p>
+   * Example:
+   * <blockquote><pre>
+   * if ex is
+   * ExecutionException(InvocationTargetExeption(SomeException))
+   * returns SomeException
+   * </pre></blockquote>
+   *
+   * @return unwrapped exception
+   */
+  private Exception unwrapException(Exception ex) {
+    if (ex != null) {
+      Throwable cause = ex.getCause();
+      if (cause instanceof Exception) {
+        Throwable innerCause = cause.getCause();
+        if (innerCause instanceof Exception) {
+          return (Exception) innerCause;
+        }
+        return (Exception) cause;
+      }
+    }
+    return ex;
   }
 }
