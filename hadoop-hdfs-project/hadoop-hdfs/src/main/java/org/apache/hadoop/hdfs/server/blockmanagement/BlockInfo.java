@@ -233,6 +233,10 @@ public class BlockInfo extends Block implements LightWeightGSet.LinkedElement {
     return getBlockUCState().equals(BlockUCState.COMPLETE);
   }
 
+  public boolean isUnderRecovery() {
+    return getBlockUCState().equals(BlockUCState.UNDER_RECOVERY);
+  }
+
   /**
    * Convert a complete block to an under construction block.
    * @return BlockInfoUnderConstruction -  an under construction block.
