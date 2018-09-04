@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.protocol;
 
+import com.google.protobuf.ByteString;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -42,7 +43,9 @@ public class DatanodeID implements Comparable<DatanodeID> {
   public static final DatanodeID[] EMPTY_ARRAY = {};
 
   private String ipAddr;     // IP address
+  private ByteString ipAddrBytes; // ipAddr ByteString to save on PB serde
   private String hostName;   // hostname claimed by datanode
+  private ByteString hostNameBytes; // hostName ByteString to save on PB serde
   private String peerHostName; // hostname from the actual connection
   private int xferPort;      // data streaming port
   private int infoPort;      // info server port
@@ -57,11 +60,16 @@ public class DatanodeID implements Comparable<DatanodeID> {
    * For newly formatted Datanodes it is a UUID.
    */
   private String datanodeUuid = null;
+  // datanodeUuid ByteString to save on PB serde
+  private ByteString datanodeUuidBytes = null;
 
   public DatanodeID(DatanodeID from) {
     this(from.getIpAddr(),
+        from.getIpAddrBytes(),
         from.getHostName(),
+        from.getHostNameBytes(),
         from.getDatanodeUuid(),
+        from.getDatanodeUuidBytes(),
         from.getXferPort(),
         from.getInfoPort(),
         from.getInfoSecurePort(),
@@ -83,18 +91,39 @@ public class DatanodeID implements Comparable<DatanodeID> {
    */
   public DatanodeID(String ipAddr, String hostName, String datanodeUuid,
       int xferPort, int infoPort, int infoSecurePort, int ipcPort) {
+    this(ipAddr, getByteString(ipAddr),
+        hostName, getByteString(hostName),
+        datanodeUuid, getByteString(datanodeUuid),
+        xferPort, infoPort, infoSecurePort, ipcPort);
+  }
+
+  private DatanodeID(String ipAddr, ByteString ipAddrBytes,
+      String hostName, ByteString hostnameBytes,
+      String datanodeUuid, ByteString datanodeUuidBytes,
+      int xferPort, int infoPort, int infoSecurePort, int ipcPort) {
     this.ipAddr = ipAddr;
+    this.ipAddrBytes = ipAddrBytes;
     this.hostName = hostName;
+    this.hostNameBytes = hostnameBytes;
     this.datanodeUuid = checkDatanodeUuid(datanodeUuid);
+    this.datanodeUuidBytes = datanodeUuidBytes;
     this.xferPort = xferPort;
     this.infoPort = infoPort;
     this.infoSecurePort = infoSecurePort;
     this.ipcPort = ipcPort;
     updateXferAddrAndInvalidateHashCode();
   }
-  
+
+  private static ByteString getByteString(String str) {
+    if (str != null) {
+      return ByteString.copyFromUtf8(str);
+    }
+    return ByteString.EMPTY;
+  }
+
   public void setIpAddr(String ipAddr) {
     this.ipAddr = ipAddr;
+    this.ipAddrBytes = getByteString(ipAddr);
     updateXferAddrAndInvalidateHashCode();
   }
 
@@ -109,9 +138,14 @@ public class DatanodeID implements Comparable<DatanodeID> {
     return datanodeUuid;
   }
 
+  public ByteString getDatanodeUuidBytes() {
+    return datanodeUuidBytes;
+  }
+
   @VisibleForTesting
   public void setDatanodeUuidForTesting(String datanodeUuid) {
     this.datanodeUuid = datanodeUuid;
+    this.datanodeUuidBytes = getByteString(datanodeUuid);
     updateXferAddrAndInvalidateHashCode();
   }
 
@@ -130,11 +164,19 @@ public class DatanodeID implements Comparable<DatanodeID> {
     return ipAddr;
   }
 
+  public ByteString getIpAddrBytes() {
+    return ipAddrBytes;
+  }
+
   /**
    * @return hostname
    */
   public String getHostName() {
     return hostName;
+  }
+
+  public ByteString getHostNameBytes() {
+    return hostNameBytes;
   }
 
   /**
@@ -262,7 +304,9 @@ public class DatanodeID implements Comparable<DatanodeID> {
    */
   public void updateRegInfo(DatanodeID nodeReg) {
     ipAddr = nodeReg.getIpAddr();
+    ipAddrBytes = getByteString(ipAddr);
     hostName = nodeReg.getHostName();
+    hostNameBytes = getByteString(hostName);
     peerHostName = nodeReg.getPeerHostName();
     xferPort = nodeReg.getXferPort();
     infoPort = nodeReg.getInfoPort();
