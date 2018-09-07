@@ -83,14 +83,11 @@ public class RequestHedgingProxyProvider<T> extends
       ExecutorService executor = null;
       CompletionService<Object> completionService;
       try {
-        // Optimization : if only 2 proxies are configured and one had failed
-        // over, then we dont need to create a threadpool etc.
         targetProxies.remove(toIgnore);
-        if (targetProxies.size() == 1) {
-          ProxyInfo<T> proxyInfo = targetProxies.values().iterator().next();
-          Object retVal = method.invoke(proxyInfo.proxy, args);
-          successfulProxy = proxyInfo;
-          return retVal;
+
+        ProxyInfo<T> targetProxy = getSuccessfulOrLeftProxy();
+        if(targetProxy != null){
+          return invokeMethodOnGivenProxy(targetProxy, method, args);
         }
         executor = Executors.newFixedThreadPool(proxies.size());
         completionService = new ExecutorCompletionService<>(executor);
@@ -141,8 +138,45 @@ public class RequestHedgingProxyProvider<T> extends
         }
       }
     }
-  }
+      /**
+       * Handle the operation on the given target proxy in params
+       *
+       * @param proxyInfo
+       * @param method
+       * @param args
+       *
+       * @throws Exception
+       */
+      private Object
+      invokeMethodOnGivenProxy(ProxyInfo<T> proxyInfo, Method method,
+                              final Object[] args) throws Exception{
+           try{
+               return method.invoke(proxyInfo.proxy, args);
+           } catch (Exception e){
+               throw unwrapException(e);
+           }
+      }
 
+    /**
+     * Get the successful/Left proxy
+     *
+     * If a proxy has failed, we, either, return the successful one, or the one not yet tested.
+     * return null if none of them exists.
+     *
+     * @return proxy ProxyInfo
+     */
+    private ProxyInfo<T> getSuccessfulOrLeftProxy(){
+      // Optimization : if only 2 proxies are configured and one had failed
+      // over, then we dont need to create a threadpool etc.
+      if (successfulProxy != null){
+        return successfulProxy;
+      }
+      if (targetProxies.size() == 1) {
+        return targetProxies.values().iterator().next();
+      }
+      return null;
+    }
+  }
 
   private volatile ProxyInfo<T> successfulProxy = null;
   private volatile String toIgnore = null;
