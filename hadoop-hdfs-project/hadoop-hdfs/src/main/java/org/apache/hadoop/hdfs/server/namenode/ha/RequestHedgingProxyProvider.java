@@ -216,8 +216,10 @@ public class RequestHedgingProxyProvider<T> extends
 
   @Override
   public synchronized void performFailover(T currentProxy) {
-    toIgnore = successfulProxy.proxyInfo;
-    successfulProxy = null;
+    if(successfulProxy != null) {
+      toIgnore = successfulProxy.proxyInfo;
+      successfulProxy = null;
+    }
   }
 
   /**
