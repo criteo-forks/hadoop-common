@@ -31,8 +31,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ipc.RemoteException;
-import org.apache.hadoop.ipc.StandbyException;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.io.retry.MultiException;
@@ -83,11 +81,14 @@ public class RequestHedgingProxyProvider<T> extends
       ExecutorService executor = null;
       CompletionService<Object> completionService;
       try {
+        // Optimization : if only 2 proxies are configured and one had failed
+        // over, then we dont need to create a threadpool etc.
         targetProxies.remove(toIgnore);
-
-        ProxyInfo<T> targetProxy = getSuccessfulOrLeftProxy();
-        if(targetProxy != null){
-          return invokeMethodOnGivenProxy(targetProxy, method, args);
+        if (targetProxies.size() == 1) {
+          ProxyInfo<T> proxyInfo = targetProxies.values().iterator().next();
+          Object retVal = method.invoke(proxyInfo.proxy, args);
+          successfulProxy = proxyInfo;
+          return retVal;
         }
         executor = Executors.newFixedThreadPool(proxies.size());
         completionService = new ExecutorCompletionService<>(executor);
@@ -117,8 +118,9 @@ public class RequestHedgingProxyProvider<T> extends
             return retVal;
           } catch (Exception ex) {
             ProxyInfo<T> tProxyInfo = proxyMap.get(callResultFuture);
-            logProxyException(ex, tProxyInfo.proxyInfo);
-            badResults.put(tProxyInfo.proxyInfo, unwrapException(ex));
+            LOG.warn("Invocation returned exception on "
+                    + "[" + tProxyInfo.proxyInfo + "]");
+            badResults.put(tProxyInfo.proxyInfo, ex);
             LOG.trace("Unsuccessful invocation on [{}]", tProxyInfo.proxyInfo);
             numAttempts--;
           }
@@ -138,45 +140,8 @@ public class RequestHedgingProxyProvider<T> extends
         }
       }
     }
-      /**
-       * Handle the operation on the given target proxy in params
-       *
-       * @param proxyInfo
-       * @param method
-       * @param args
-       *
-       * @throws Exception
-       */
-      private Object
-      invokeMethodOnGivenProxy(ProxyInfo<T> proxyInfo, Method method,
-                              final Object[] args) throws Exception{
-           try{
-               return method.invoke(proxyInfo.proxy, args);
-           } catch (Exception e){
-               throw unwrapException(e);
-           }
-      }
-
-    /**
-     * Get the successful/Left proxy
-     *
-     * If a proxy has failed, we, either, return the successful one, or the one not yet tested.
-     * return null if none of them exists.
-     *
-     * @return proxy ProxyInfo
-     */
-    private ProxyInfo<T> getSuccessfulOrLeftProxy(){
-      // Optimization : if only 2 proxies are configured and one had failed
-      // over, then we dont need to create a threadpool etc.
-      if (successfulProxy != null){
-        return successfulProxy;
-      }
-      if (targetProxies.size() == 1) {
-        return targetProxies.values().iterator().next();
-      }
-      return null;
-    }
   }
+
 
   private volatile ProxyInfo<T> successfulProxy = null;
   private volatile String toIgnore = null;
@@ -216,65 +181,7 @@ public class RequestHedgingProxyProvider<T> extends
 
   @Override
   public synchronized void performFailover(T currentProxy) {
-    if(successfulProxy != null) {
-      toIgnore = successfulProxy.proxyInfo;
-      successfulProxy = null;
-    }
-  }
-
-  /**
-   * Check the exception returned by the proxy log a warning message if it's
-   * not a StandbyException (expected exception).
-   * @param ex Exception to evaluate.
-   * @param proxyInfo Information of the proxy reporting the exception.
-   */
-  private void logProxyException(Exception ex, String proxyInfo) {
-    if (isStandbyException(ex)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Invocation returned standby exception on [" +
-            proxyInfo + "]");
-      }
-    } else {
-      LOG.warn("Invocation returned exception on [" + proxyInfo + "]");
-    }
-  }
-
-  /**
-   * Check if the returned exception is caused by an standby namenode.
-   * @param ex Exception to check.
-   * @return If the exception is caused by an standby namenode.
-   */
-  private boolean isStandbyException(Exception ex) {
-    Exception exception = unwrapException(ex);
-    if (exception instanceof RemoteException) {
-      return ((RemoteException) exception).unwrapRemoteException()
-          instanceof StandbyException;
-    }
-    return false;
-  }
-
-  /**
-   * Unwraps the exception. <p>
-   * Example:
-   * <blockquote><pre>
-   * if ex is
-   * ExecutionException(InvocationTargetExeption(SomeException))
-   * returns SomeException
-   * </pre></blockquote>
-   *
-   * @return unwrapped exception
-   */
-  private Exception unwrapException(Exception ex) {
-    if (ex != null) {
-      Throwable cause = ex.getCause();
-      if (cause instanceof Exception) {
-        Throwable innerCause = cause.getCause();
-        if (innerCause instanceof Exception) {
-          return (Exception) innerCause;
-        }
-        return (Exception) cause;
-      }
-    }
-    return ex;
+    toIgnore = successfulProxy.proxyInfo;
+    successfulProxy = null;
   }
 }
