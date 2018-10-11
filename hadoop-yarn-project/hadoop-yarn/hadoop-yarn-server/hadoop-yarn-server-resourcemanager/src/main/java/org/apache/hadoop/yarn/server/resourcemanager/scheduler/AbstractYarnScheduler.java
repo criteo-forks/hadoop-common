@@ -583,4 +583,9 @@ public abstract class AbstractYarnScheduler
   protected void refreshMaximumAllocation(Resource newMaxAlloc) {
     nodeTracker.setConfiguredMaxAllocation(newMaxAlloc);
   }
+
+  @Override
+  public Collection<RMContainer> getLiveContainers(ApplicationAttemptId applicationAttemptId) {
+    return getApplicationAttempt(applicationAttemptId).getLiveContainers();
+  }
 }
