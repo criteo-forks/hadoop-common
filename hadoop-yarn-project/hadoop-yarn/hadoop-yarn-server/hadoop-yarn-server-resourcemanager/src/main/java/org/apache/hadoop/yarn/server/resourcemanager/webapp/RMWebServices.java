@@ -633,7 +633,11 @@ public class RMWebServices {
       throw new BadRequestException("appId, " + appId + ", is empty or null");
     }
     ApplicationId id;
-    id = ConverterUtils.toApplicationId(recordFactory, appId);
+    try {
+      id = ConverterUtils.toApplicationId(recordFactory, appId);
+    } catch(Exception e){
+      throw new BadRequestException(appId + " is not a valid appId. A valid appId looks like application_1539264296421_0013");
+    }
     if (id == null) {
       throw new NotFoundException("appId is null");
     }

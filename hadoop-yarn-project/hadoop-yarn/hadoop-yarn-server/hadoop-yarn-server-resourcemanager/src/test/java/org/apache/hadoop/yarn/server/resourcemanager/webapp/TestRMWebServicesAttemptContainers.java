@@ -263,6 +263,32 @@ public class TestRMWebServicesAttemptContainers extends JerseyTest {
     rm.stop();
   }
 
+  @Test
+  public void testInvalidApp() throws JSONException, Exception {
+    WebResource r = resource();
+    ClientResponse response = r.path("ws").path("v1").path("cluster")
+              .path("apps").path("not_an_app_id")
+              .path("containers").path("running")
+              .accept(MediaType.APPLICATION_JSON)
+              .get(ClientResponse.class);
+
+    assertEquals(Status.BAD_REQUEST, response.getClientResponseStatus());
+    assertEquals(MediaType.APPLICATION_JSON_TYPE, response.getType());
+    JSONObject msg = response.getEntity(JSONObject.class);
+    JSONObject exception = msg.getJSONObject("RemoteException");
+    assertEquals("incorrect number of elements", 3, exception.length());
+    String message = exception.getString("message");
+    String type = exception.getString("exception");
+    String classname = exception.getString("javaClassName");
+    WebServicesTestUtils.checkStringMatch("exception message",
+            "java.lang.Exception: not_an_app_id is not a valid appId. A valid appId looks like application_1539264296421_0013", message);
+    WebServicesTestUtils.checkStringMatch("exception type",
+            "BadRequestException", type);
+    WebServicesTestUtils.checkStringMatch("exception classname",
+            "org.apache.hadoop.yarn.webapp.BadRequestException", classname);
+
+  }
+
   private void verifyContainerXml(Container container, Element element) {
     String id = WebServicesTestUtils.getXmlString(element, "id");
     assertEquals(container.getId().toString(), id);
