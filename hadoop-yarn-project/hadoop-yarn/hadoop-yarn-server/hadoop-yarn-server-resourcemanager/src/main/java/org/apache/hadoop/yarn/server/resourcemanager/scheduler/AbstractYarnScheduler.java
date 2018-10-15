@@ -1474,4 +1474,10 @@ public abstract class AbstractYarnScheduler
   public void resetSchedulerMetrics() {
     // reset scheduler metrics
   }
+
+  @Override
+  public Collection<RMContainer> getLiveContainers(ApplicationAttemptId applicationAttemptId) {
+      return getApplicationAttempt(applicationAttemptId).getLiveContainers();
+  }
+
 }

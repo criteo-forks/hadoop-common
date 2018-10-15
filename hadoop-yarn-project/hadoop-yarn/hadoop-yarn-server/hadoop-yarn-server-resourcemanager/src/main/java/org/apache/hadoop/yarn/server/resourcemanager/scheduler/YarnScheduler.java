@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -351,7 +352,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
 
   /**
    * Set the cluster max priority
-   * 
+   *
    * @param conf
    * @throws YarnException
    */
@@ -365,7 +366,7 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
 
   /**
    * Get cluster max priority.
-   * 
+   *
    * @return maximum priority of cluster
    */
   Priority getMaxClusterLevelAppPriority();
@@ -406,4 +407,12 @@ public interface YarnScheduler extends EventHandler<SchedulerEvent> {
   @Public
   @Evolving
   long getMaximumApplicationLifetime(String queueName);
+
+  /**
+   * Get the current live containers for an ApplicationAttemptId
+   *
+   * @param applicationAttemptId the attemptId
+   * @return A colelction of live RMContainer for this attemptId
+   */
+  Collection<RMContainer> getLiveContainers(ApplicationAttemptId applicationAttemptId);
 }
