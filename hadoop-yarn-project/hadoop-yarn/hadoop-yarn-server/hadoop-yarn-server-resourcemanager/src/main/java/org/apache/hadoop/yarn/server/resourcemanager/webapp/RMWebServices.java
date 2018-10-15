@@ -84,6 +84,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
+import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -104,7 +105,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstant
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
+import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
@@ -135,6 +139,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInf
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeLabelsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeToLabelsInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AttemptContainers;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.webapp.BadRequestException;
@@ -619,6 +624,57 @@ public class RMWebServices {
   }
 
   @GET
+  @Path("/apps/{appid}/containers/running")
+  @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  public AttemptContainers getRunningContainers(@Context HttpServletRequest hsr,
+                                                @PathParam("appid") String appId){
+    init();
+    if (appId == null || appId.isEmpty()) {
+      throw new BadRequestException("appId, " + appId + ", is empty or null");
+    }
+    ApplicationId id;
+    try {
+      id = ConverterUtils.toApplicationId(recordFactory, appId);
+    } catch(Exception e){
+      throw new BadRequestException(appId + " is not a valid appId. A valid appId looks like application_1539264296421_0013");
+    }
+    if (id == null) {
+      throw new NotFoundException("appId is null");
+    }
+    RMApp app = rm.getRMContext().getRMApps().get(id);
+    if (app == null) {
+      throw new NotFoundException("app with id: " + appId + " not found");
+    }
+
+    if(!app.getState().equals(RMAppState.RUNNING)) {
+      throw new BadRequestException("cannot find containers for app not in RUNNING state");
+    }
+
+    RMAppAttempt appAttempt = app.getCurrentAppAttempt();
+    AttemptContainers containers = new AttemptContainers(appAttempt.getAppAttemptId());
+
+    Container am = appAttempt.getMasterContainer();
+    containers.addAm(
+            am.getId().toString(),
+            am.getNodeId().getHost()
+    );
+
+    for(RMContainer rmContainer: app.getCurrentAppAttempt().getLiveContainers()){
+      //we already have the application master so filter it
+      //we also only want allocated and RUNNING containers (and not reserved ones)
+      if(!rmContainer.isAMContainer()
+              && rmContainer.getAllocatedNode() != null
+              && rmContainer.getState().equals(RMContainerState.RUNNING)){
+        containers.add(
+                rmContainer.getContainerId().toString(),
+                rmContainer.getAllocatedNode().getHost()
+        );
+      }
+    }
+    return containers;
+  }
+
+  @GET
   @Path("/apps/{appid}/appattempts")
   @Produces({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
   public AppAttemptsInfo getAppAttempts(@PathParam("appid") String appId) {
@@ -789,7 +845,7 @@ public class RMWebServices {
     throws IOException {
     init();
 
-    NodeLabelsInfo ret = 
+    NodeLabelsInfo ret =
       new NodeLabelsInfo(rm.getRMContext().getNodeLabelManager()
         .getClusterNodeLabels());
 
