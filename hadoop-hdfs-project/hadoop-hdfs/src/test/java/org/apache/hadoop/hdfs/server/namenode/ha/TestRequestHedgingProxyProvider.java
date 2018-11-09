@@ -205,14 +205,14 @@ public class TestRequestHedgingProxyProvider {
     Assert.assertEquals(2, stats[0]);
 
     // Counter should update only once
-    Assert.assertEquals(5, counter.get());
+    Assert.assertEquals(7, counter.get());
 
     stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(2, stats[0]);
 
     // Counter updates only once now
-    Assert.assertEquals(6, counter.get());
+    Assert.assertEquals(8, counter.get());
 
     // Flip back to old active.. so now this should fail
     isGood[0] = 1;
@@ -223,7 +223,7 @@ public class TestRequestHedgingProxyProvider {
       Assert.assertTrue(ex instanceof IOException);
     }
 
-    Assert.assertEquals(7, counter.get());
+    Assert.assertEquals(9, counter.get());
 
     provider.performFailover(provider.getProxy().proxy);
     stats = provider.getProxy().proxy.getStats();
@@ -289,10 +289,8 @@ public class TestRequestHedgingProxyProvider {
     Mockito.verify(goodMock).getStats();
     Mockito.verify(worseMock).getStats();
 
-    stats = provider.getProxy().proxy.getStats();
-    Assert.assertTrue(stats.length == 1);
-    Assert.assertEquals(1, stats[0]);
     // Ensure only the previous successful one is invoked
+    stats = provider.getProxy().proxy.getStats();
     Mockito.verifyNoMoreInteractions(badMock);
     Mockito.verifyNoMoreInteractions(worseMock);
     Assert.assertEquals(4, counter.get());
@@ -313,15 +311,17 @@ public class TestRequestHedgingProxyProvider {
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(2, stats[0]);
 
-    // Counter updates twice since both proxies are tried on failure
-    Assert.assertEquals(7, counter.get());
+    // Counter is updated acording to the number of proxies initially
+    // Created to make sure nothing happens between the exception encoutred
+    // when the invoke method fail with the previous "successfullProxy"
+    Assert.assertEquals(8, counter.get());
 
     stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(2, stats[0]);
 
     // Counter updates only once now
-    Assert.assertEquals(8, counter.get());
+    Assert.assertEquals(9, counter.get());
 
     // Flip to Other standby.. so now this should fail
     isGood[0] = 3;
@@ -333,7 +333,7 @@ public class TestRequestHedgingProxyProvider {
     }
 
     // Counter should ipdate only 1 time
-    Assert.assertEquals(9, counter.get());
+    Assert.assertEquals(10, counter.get());
 
     provider.performFailover(provider.getProxy().proxy);
     stats = provider.getProxy().proxy.getStats();
@@ -343,14 +343,14 @@ public class TestRequestHedgingProxyProvider {
     Assert.assertEquals(3, stats[0]);
 
     // Counter updates twice since both proxies are tried on failure
-    Assert.assertEquals(11, counter.get());
+    Assert.assertEquals(13, counter.get());
 
     stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(3, stats[0]);
 
     // Counter updates only once now
-    Assert.assertEquals(12, counter.get());
+    Assert.assertEquals(14, counter.get());
   }
 
   @Test
