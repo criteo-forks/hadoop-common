@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -128,7 +128,7 @@ public class TestRequestHedgingProxyProvider {
     Mockito.when(badMock.getStats()).thenThrow(new IOException("Bad mock !!"));
     NamenodeProtocols worseMock = Mockito.mock(NamenodeProtocols.class);
     Mockito.when(worseMock.getStats()).thenThrow(
-            new IOException("Worse mock !!"));
+        new IOException("Worse mock !!"));
 
     RequestHedgingProxyProvider<NamenodeProtocols> provider =
         new RequestHedgingProxyProvider<>(conf, nnUri, NamenodeProtocols.class,
@@ -172,8 +172,8 @@ public class TestRequestHedgingProxyProvider {
       }
     });
     RequestHedgingProxyProvider<NamenodeProtocols> provider =
-            new RequestHedgingProxyProvider<>(conf, nnUri, NamenodeProtocols.class,
-                    createFactory(goodMock, badMock));
+        new RequestHedgingProxyProvider<>(conf, nnUri, NamenodeProtocols.class,
+            createFactory(goodMock, badMock));
     long[] stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(1, stats[0]);
@@ -235,9 +235,9 @@ public class TestRequestHedgingProxyProvider {
   @Test
   public void testPerformFailoverWith3Proxies() throws Exception {
     conf.set(DFSConfigKeys.DFS_HA_NAMENODES_KEY_PREFIX + "." + ns,
-            "nn1,nn2,nn3");
+        "nn1,nn2,nn3");
     conf.set(DFSConfigKeys.DFS_NAMENODE_RPC_ADDRESS_KEY + "." + ns + ".nn3",
-            "machine3.foo.bar:8020");
+        "machine3.foo.bar:8020");
 
     final AtomicInteger counter = new AtomicInteger(0);
     final int[] isGood = {1};
@@ -279,8 +279,8 @@ public class TestRequestHedgingProxyProvider {
     });
 
     RequestHedgingProxyProvider<NamenodeProtocols> provider =
-            new RequestHedgingProxyProvider<>(conf, nnUri, NamenodeProtocols.class,
-                    createFactory(goodMock, badMock, worseMock));
+        new RequestHedgingProxyProvider<>(conf, nnUri, NamenodeProtocols.class,
+            createFactory(goodMock, badMock, worseMock));
     long[] stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(1, stats[0]);
@@ -292,6 +292,7 @@ public class TestRequestHedgingProxyProvider {
     stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(1, stats[0]);
+
     // Ensure only the previous successful one is invoked
     Mockito.verifyNoMoreInteractions(badMock);
     Mockito.verifyNoMoreInteractions(worseMock);
@@ -313,15 +314,17 @@ public class TestRequestHedgingProxyProvider {
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(2, stats[0]);
 
-    // Counter updates twice since both proxies are tried on failure
-    Assert.assertEquals(7, counter.get());
+    // Counter is updated acording to the number of proxies initially
+    // Created to make sure nothing happens between the exception encoutred
+    // when the invoke method fail with the previous "successfullProxy"
+    Assert.assertEquals(8, counter.get());
 
     stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(2, stats[0]);
 
     // Counter updates only once now
-    Assert.assertEquals(8, counter.get());
+    Assert.assertEquals(9, counter.get());
 
     // Flip to Other standby.. so now this should fail
     isGood[0] = 3;
@@ -333,7 +336,7 @@ public class TestRequestHedgingProxyProvider {
     }
 
     // Counter should ipdate only 1 time
-    Assert.assertEquals(9, counter.get());
+    Assert.assertEquals(10, counter.get());
 
     provider.performFailover(provider.getProxy().proxy);
     stats = provider.getProxy().proxy.getStats();
@@ -343,14 +346,14 @@ public class TestRequestHedgingProxyProvider {
     Assert.assertEquals(3, stats[0]);
 
     // Counter updates twice since both proxies are tried on failure
-    Assert.assertEquals(11, counter.get());
+    Assert.assertEquals(13, counter.get());
 
     stats = provider.getProxy().proxy.getStats();
     Assert.assertTrue(stats.length == 1);
     Assert.assertEquals(3, stats[0]);
 
     // Counter updates only once now
-    Assert.assertEquals(12, counter.get());
+    Assert.assertEquals(14, counter.get());
   }
 
   @Test
@@ -368,7 +371,7 @@ public class TestRequestHedgingProxyProvider {
             Matchers.anyLong(), Matchers.anyLong()))
         .thenThrow(
             new RemoteException("org.apache.hadoop.ipc.StandbyException",
-            "Standby NameNode"));
+                "Standby NameNode"));
 
     RequestHedgingProxyProvider<NamenodeProtocols> provider =
         new RequestHedgingProxyProvider<>(conf, nnUri,
@@ -401,7 +404,7 @@ public class TestRequestHedgingProxyProvider {
     Mockito.when(standby.getStats())
         .thenThrow(
             new RemoteException("org.apache.hadoop.ipc.StandbyException",
-            "Standby NameNode"));
+                "Standby NameNode"));
 
     RequestHedgingProxyProvider<NamenodeProtocols> provider =
         new RequestHedgingProxyProvider<>(conf, nnUri,
@@ -460,9 +463,9 @@ public class TestRequestHedgingProxyProvider {
     return new ProxyFactory<NamenodeProtocols>() {
       @Override
       public NamenodeProtocols createProxy(Configuration conf,
-          InetSocketAddress nnAddr, Class<NamenodeProtocols> xface,
-          UserGroupInformation ugi, boolean withRetries,
-          AtomicBoolean fallbackToSimpleAuth) throws IOException {
+                                           InetSocketAddress nnAddr, Class<NamenodeProtocols> xface,
+                                           UserGroupInformation ugi, boolean withRetries,
+                                           AtomicBoolean fallbackToSimpleAuth) throws IOException {
         return iterator.next();
       }
     };
