@@ -51,7 +51,7 @@ public abstract class UpdateNodeResourceRequest {
     request.setNodeResourceMap(nodeResourceMap);
     return request;
   }
-  
+
   /**
    * Get the map from <code>NodeId</code> to <code>ResourceOption</code>.
    * @return the map of <NodeId, ResourceOption>

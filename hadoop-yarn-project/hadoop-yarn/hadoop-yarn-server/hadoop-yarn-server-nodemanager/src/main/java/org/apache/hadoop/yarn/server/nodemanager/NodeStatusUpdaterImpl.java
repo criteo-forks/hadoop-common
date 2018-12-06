@@ -619,6 +619,7 @@ public class NodeStatusUpdaterImpl extends AbstractService implements
             }
 
             response = resourceTracker.nodeHeartbeat(request);
+
             //get next heartbeat interval from response
             nextHeartBeatInterval = response.getNextHeartBeatInterval();
             updateMasterKeys(response);

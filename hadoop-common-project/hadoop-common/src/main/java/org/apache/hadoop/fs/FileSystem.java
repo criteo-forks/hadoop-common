@@ -25,21 +25,7 @@ import java.lang.ref.ReferenceQueue;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IdentityHashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.ServiceConfigurationError;
-import java.util.ServiceLoader;
-import java.util.Set;
-import java.util.Stack;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -2965,6 +2951,7 @@ public abstract class FileSystem extends Configured implements Closeable {
       final String authority;
       final UserGroupInformation ugi;
       final long unique;   // an artificial way to make a key unique
+      final Configuration conf;
 
       Key(URI uri, Configuration conf) throws IOException {
         this(uri, conf, 0);
@@ -2976,35 +2963,26 @@ public abstract class FileSystem extends Configured implements Closeable {
         this.unique = unique;
         
         this.ugi = UserGroupInformation.getCurrentUser();
+
+        this.conf = conf;
       }
 
       @Override
       public int hashCode() {
-        return (scheme + authority).hashCode() + ugi.hashCode() + (int)unique;
+        return Objects.hash(scheme, authority, ugi, unique, conf);
       }
 
       static boolean isEqual(Object a, Object b) {
         return a == b || (a != null && a.equals(b));        
       }
 
-      @Override
-      public boolean equals(Object obj) {
-        if (obj == this) {
-          return true;
-        }
-        if (obj != null && obj instanceof Key) {
-          Key that = (Key)obj;
-          return isEqual(this.scheme, that.scheme)
-                 && isEqual(this.authority, that.authority)
-                 && isEqual(this.ugi, that.ugi)
-                 && (this.unique == that.unique);
-        }
-        return false;        
-      }
-
-      @Override
+        @Override
       public String toString() {
-        return "("+ugi.toString() + ")@" + scheme + "://" + authority;        
+        String s = "";
+        if(conf != null){
+            s +=  conf.toString() + " -> ";
+        }
+        return s + "("+ugi.toString() + ")@" + scheme + "://" + authority;
       }
     }
   }
@@ -3590,4 +3568,5 @@ public abstract class FileSystem extends Configured implements Closeable {
   public static GlobalStorageStatistics getGlobalStorageStatistics() {
     return GlobalStorageStatistics.INSTANCE;
   }
+
 }
