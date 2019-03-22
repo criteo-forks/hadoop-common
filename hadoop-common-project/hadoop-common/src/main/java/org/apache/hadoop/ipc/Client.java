@@ -854,7 +854,7 @@ public class Client {
       if (action.action == RetryAction.RetryDecision.FAIL) {
         if (action.reason != null) {
           LOG.warn("Failed to connect to server: " + server + ": "
-              + action.reason);
+              + action.reason, ioe);
         }
         throw ioe;
       }
