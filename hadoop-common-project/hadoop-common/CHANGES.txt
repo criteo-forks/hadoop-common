@@ -264,6 +264,9 @@ Release 2.6.0 - 2014-11-18
     issues with newer versions of guava in applications. (Christopher Tubbs
     via acmurthy)
 
+    HADOOP-11642. Upgrade azure sdk version from 0.6.0 to 2.0.0.
+    (Shashank Khandelwal and Ivan Mitic via cnauroth)
+
   OPTIMIZATIONS
 
     HADOOP-10838. Byte array native checksumming. (James Thomas via todd)
