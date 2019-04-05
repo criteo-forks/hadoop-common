@@ -54,6 +54,7 @@ import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
 import org.apache.hadoop.service.AbstractService;
@@ -462,6 +463,18 @@ public class DelegationTokenRenewer extends AbstractService {
           try {
             renewToken(dttr);
           } catch (IOException ioe) {
+            if (ioe instanceof SecretManager.InvalidToken
+                && dttr.maxDate < Time.now()
+                && evt instanceof DelegationTokenRenewerAppRecoverEvent
+                && token.getKind().equals(HDFS_DELEGATION_KIND)) {
+              LOG.info("Failed to renew hdfs token " + dttr
+                  + " on recovery as it expired, requesting new hdfs token for "
+                  + applicationId + ", user=" + evt.getUser(), ioe);
+              requestNewHdfsDelegationTokenAsProxyUser(
+                  Arrays.asList(applicationId), evt.getUser(),
+                  evt.shouldCancelAtEnd());
+              continue;
+            }
             throw new IOException("Failed to renew token: " + dttr.token, ioe);
           }
         }
@@ -488,7 +501,8 @@ public class DelegationTokenRenewer extends AbstractService {
     }
 
     if (!hasHdfsToken) {
-      requestNewHdfsDelegationToken(Arrays.asList(applicationId), evt.getUser(),
+      requestNewHdfsDelegationTokenAsProxyUser(Arrays.asList(applicationId),
+          evt.getUser(),
         shouldCancelAtEnd);
     }
   }
@@ -589,8 +603,7 @@ public class DelegationTokenRenewer extends AbstractService {
     } catch (InterruptedException e) {
       throw new IOException(e);
     }
-    LOG.info("Renewed delegation-token= [" + dttr + "], for "
-        + dttr.referringAppIds);
+    LOG.info("Renewed delegation-token= [" + dttr + "]");
   }
 
   // Request new hdfs token if the token is about to expire, and remove the old
@@ -628,12 +641,12 @@ public class DelegationTokenRenewer extends AbstractService {
         }
       }
       LOG.info("Token= (" + dttr + ") is expiring, request new token.");
-      requestNewHdfsDelegationToken(applicationIds, dttr.user,
+      requestNewHdfsDelegationTokenAsProxyUser(applicationIds, dttr.user,
           dttr.shouldCancelAtEnd);
     }
   }
 
-  private void requestNewHdfsDelegationToken(
+  private void requestNewHdfsDelegationTokenAsProxyUser(
       Collection<ApplicationId> referringAppIds,
       String user, boolean shouldCancelAtEnd) throws IOException,
       InterruptedException {
@@ -910,8 +923,8 @@ public class DelegationTokenRenewer extends AbstractService {
       // Setup tokens for renewal during recovery
       DelegationTokenRenewer.this.handleAppSubmitEvent(event);
     } catch (Throwable t) {
-      LOG.warn(
-          "Unable to add the application to the delegation token renewer.", t);
+      LOG.warn("Unable to add the application to the delegation token"
+          + " renewer on recovery.", t);
     }
   }
 
