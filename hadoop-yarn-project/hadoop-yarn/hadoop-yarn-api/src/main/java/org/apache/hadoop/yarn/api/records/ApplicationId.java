@@ -43,6 +43,8 @@ public abstract class ApplicationId implements Comparable<ApplicationId> {
   @Unstable
   public static final String appIdStrPrefix = "application_";
 
+  private static final String APPLICATION_ID_PREFIX = appIdStrPrefix + '_';
+
   @Private
   @Unstable
   public static ApplicationId newInstance(long clusterTimestamp, int id) {
@@ -107,6 +109,31 @@ public abstract class ApplicationId implements Comparable<ApplicationId> {
   public String toString() {
     return appIdStrPrefix + this.getClusterTimestamp() + "_"
         + appIdFormat.get().format(getId());
+  }
+
+  @Public
+  @Stable
+  public static ApplicationId fromString(String appIdStr) {
+    if (!appIdStr.startsWith(APPLICATION_ID_PREFIX)) {
+      throw new IllegalArgumentException("Invalid ApplicationId prefix: "
+          + appIdStr + ". The valid ApplicationId should start with prefix "
+          + appIdStrPrefix);
+    }
+    try {
+      int pos1 = APPLICATION_ID_PREFIX.length() - 1;
+      int pos2 = appIdStr.indexOf('_', pos1 + 1);
+      if (pos2 < 0) {
+        throw new IllegalArgumentException("Invalid ApplicationId: "
+            + appIdStr);
+      }
+      long rmId = Long.parseLong(appIdStr.substring(pos1 + 1, pos2));
+      int appId = Integer.parseInt(appIdStr.substring(pos2 + 1));
+      ApplicationId applicationId = ApplicationId.newInstance(rmId, appId);
+      return applicationId;
+    } catch (NumberFormatException n) {
+      throw new IllegalArgumentException("Invalid ApplicationId: "
+          + appIdStr, n);
+    }
   }
 
   @Override

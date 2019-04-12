@@ -80,7 +80,10 @@
 
     <tomcat.version>${cdh.tomcat.version}</tomcat.version>
     <joda-time.version>2.9.4</joda-time.version>
-
+    <hikari.version>2.4.11</hikari.version>
+    <mssql.version>6.1.0.jre7</mssql.version>
+    <jcache.version>1.0.0</jcache.version>
+    <ehcache.version>3.0.3</ehcache.version>
 
 
     <!-- define the Java language version used by the compiler -->
@@ -1015,6 +1018,16 @@
           <groupId>com.microsoft.sqlserver</groupId>
           <artifactId>mssql-jdbc</artifactId>
           <version>${mssql.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>javax.cache</groupId>
+          <artifactId>cache-api</artifactId>
+          <version>${jcache.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>org.ehcache</groupId>
+          <artifactId>ehcache</artifactId>
+          <version>${ehcache.version}</version>
       </dependency>
     </dependencies>
   </dependencyManagement>

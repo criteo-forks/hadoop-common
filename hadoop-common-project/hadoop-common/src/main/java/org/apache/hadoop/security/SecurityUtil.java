@@ -25,10 +25,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.ServiceLoader;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import javax.security.auth.kerberos.KerberosPrincipal;
@@ -49,6 +46,7 @@ import org.apache.hadoop.util.StopWatch;
 
 
 //this will need to be replaced someday when there is a suitable replacement
+import org.apache.hadoop.util.ZKUtil;
 import sun.net.dns.ResolverConfiguration;
 import sun.net.util.IPAddressUtil;
 
@@ -680,5 +678,30 @@ public class SecurityUtil {
    */
   public static boolean isPrivilegedPort(final int port) {
     return port < 1024;
+  }
+
+
+  /**
+   * Utility method to fetch ZK auth info from the configuration.
+   * @throws java.io.IOException if the Zookeeper ACLs configuration file
+   * cannot be read
+   * @throws ZKUtil.BadAuthFormatException if the auth format is invalid
+   */
+  public static List<ZKUtil.ZKAuthInfo> getZKAuthInfos(Configuration conf,
+                                                       String configKey) throws IOException {
+    char[] zkAuthChars = conf.getPassword(configKey);
+    String zkAuthConf =
+        zkAuthChars != null ? String.valueOf(zkAuthChars) : null;
+    try {
+      zkAuthConf = ZKUtil.resolveConfIndirection(zkAuthConf);
+      if (zkAuthConf != null) {
+        return ZKUtil.parseAuth(zkAuthConf);
+      } else {
+        return Collections.emptyList();
+      }
+    } catch (IOException | ZKUtil.BadAuthFormatException e) {
+      LOG.error("Couldn't read Auth based on " + configKey);
+      throw e;
+    }
   }
 }
