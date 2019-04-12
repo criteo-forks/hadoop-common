@@ -32,7 +32,6 @@ import com.google.common.base.Preconditions;
 
 public class ServerRMProxy<T> extends RMProxy<T> {
   private static final Log LOG = LogFactory.getLog(ServerRMProxy.class);
-  private static final ServerRMProxy INSTANCE = new ServerRMProxy();
 
   private ServerRMProxy() {
     super();
@@ -65,13 +64,14 @@ public class ServerRMProxy<T> extends RMProxy<T> {
         configuration.getLong(
             YarnConfiguration.NM_RESOURCEMANAGER_CONNECT_RETRY_INTERVAL_MS,
                 rmRetryInterval);
-    return createRMProxy(configuration, protocol, INSTANCE,
+    ServerRMProxy<T> serverRMProxy = new ServerRMProxy<>();
+    return createRMProxy(configuration, protocol, serverRMProxy,
         nmRmConnectWait, nmRmRetryInterval);
   }
 
   @InterfaceAudience.Private
   @Override
-  protected InetSocketAddress getRMAddress(YarnConfiguration conf,
+  public InetSocketAddress getRMAddress(YarnConfiguration conf,
                                            Class<?> protocol) {
     if (protocol == ResourceTracker.class) {
       return conf.getSocketAddr(
@@ -89,7 +89,7 @@ public class ServerRMProxy<T> extends RMProxy<T> {
 
   @InterfaceAudience.Private
   @Override
-  protected void checkAllowedProtocols(Class<?> protocol) {
+  public void checkAllowedProtocols(Class<?> protocol) {
     Preconditions.checkArgument(
         protocol.isAssignableFrom(ResourceTracker.class),
         "ResourceManager does not support this protocol");

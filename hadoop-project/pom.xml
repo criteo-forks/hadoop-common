@@ -81,6 +81,8 @@
     <tomcat.version>${cdh.tomcat.version}</tomcat.version>
     <joda-time.version>2.9.4</joda-time.version>
 
+
+
     <!-- define the Java language version used by the compiler -->
     <javac.version>${javaVersion}</javac.version>
 
@@ -1004,7 +1006,16 @@
             <artifactId>jsonassert</artifactId>
             <version>1.3.0</version>
         </dependency>
-
+      <dependency>
+          <groupId>com.zaxxer</groupId>
+          <artifactId>HikariCP-java7</artifactId>
+          <version>${hikari.version}</version>
+      </dependency>
+      <dependency>
+          <groupId>com.microsoft.sqlserver</groupId>
+          <artifactId>mssql-jdbc</artifactId>
+          <version>${mssql.version}</version>
+      </dependency>
     </dependencies>
   </dependencyManagement>
 
