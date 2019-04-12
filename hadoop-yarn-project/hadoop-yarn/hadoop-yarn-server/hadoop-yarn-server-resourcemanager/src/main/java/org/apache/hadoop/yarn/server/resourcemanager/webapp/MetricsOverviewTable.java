@@ -52,7 +52,7 @@ public class MetricsOverviewTable extends HtmlBlock {
     //CSS in the correct spot
     html.style(".metrics {margin-bottom:5px}"); 
     
-    ClusterMetricsInfo clusterMetrics = new ClusterMetricsInfo(this.rm);
+    ClusterMetricsInfo clusterMetrics = new ClusterMetricsInfo(this.rm.getResourceScheduler());
     
     DIV<Hamlet> div = html.div().$class("metrics");
     
