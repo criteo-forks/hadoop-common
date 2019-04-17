@@ -228,7 +228,7 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
       if (retryInfo.action.reason != null) {
         LOG.warn("Exception while invoking "
             + proxyDescriptor.getProxyInfo().getString(method.getName())
-            + ". Not retrying because " + retryInfo.action.reason);
+            + ". Not retrying because " + retryInfo.action.reason, ex);
       }
       throw retryInfo.getFailException();
     }
@@ -256,23 +256,27 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
   }
 
   private void log(final Method method, final boolean isFailover,
-                   final int failovers, final long delay, final Exception ex) {
+      final int failovers, final long delay, final Exception ex) {
     // log info if this has made some successful calls or
     // this is not the first failover
-    final StringBuilder b =
-        new StringBuilder()
-            .append("Exception while invoking ")
-            .append(proxyDescriptor.getProxyInfo().getString(method.getName()));
+    final boolean info = hasMadeASuccessfulCall || failovers != 0;
+    if (!info && !LOG.isDebugEnabled()) {
+      return;
+    }
+
+    final StringBuilder b = new StringBuilder()
+        .append("Exception while invoking ")
+        .append(proxyDescriptor.getProxyInfo().getString(method.getName()));
     if (failovers > 0) {
       b.append(" after ").append(failovers).append(" failover attempts");
     }
-    b.append(isFailover ? ". Trying to failover " : ". Retrying ")
-        .append(delay > 0 ? "after sleeping for " + delay + "ms." : "immediately.");
+    b.append(isFailover? ". Trying to failover ": ". Retrying ");
+    b.append(delay > 0? "after sleeping for " + delay + "ms.": "immediately.");
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(b.append(" Reason: ").toString(), ex);
+    if (info) {
+      LOG.info(b.toString(), ex);
     } else {
-      LOG.warn(b.toString());
+      LOG.debug(b.toString(), ex);
     }
   }
 
