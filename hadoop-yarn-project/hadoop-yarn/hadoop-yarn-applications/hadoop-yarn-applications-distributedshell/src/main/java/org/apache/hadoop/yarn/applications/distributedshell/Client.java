@@ -344,7 +344,7 @@ public class Client {
     appName = cliParser.getOptionValue("appname", "DistributedShell");
     amPriority = Integer.parseInt(cliParser.getOptionValue("priority", "0"));
     amQueue = cliParser.getOptionValue("queue", "default");
-    amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "10"));		
+    amMemory = Integer.parseInt(cliParser.getOptionValue("master_memory", "100"));
     amVCores = Integer.parseInt(cliParser.getOptionValue("master_vcores", "1"));
 
     if (amMemory < 0) {
@@ -460,21 +460,23 @@ public class Client {
     }
 
     QueueInfo queueInfo = yarnClient.getQueueInfo(this.amQueue);
-    LOG.info("Queue info"
-        + ", queueName=" + queueInfo.getQueueName()
-        + ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity()
-        + ", queueMaxCapacity=" + queueInfo.getMaximumCapacity()
-        + ", queueApplicationCount=" + queueInfo.getApplications().size()
-        + ", queueChildQueueCount=" + queueInfo.getChildQueues().size());		
+    if (queueInfo != null) {
+      LOG.info("Queue info"
+          + ", queueName=" + queueInfo.getQueueName()
+          + ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity()
+          + ", queueMaxCapacity=" + queueInfo.getMaximumCapacity()
+          + ", queueApplicationCount=" + queueInfo.getApplications().size()
+          + ", queueChildQueueCount=" + queueInfo.getChildQueues().size());
 
-    List<QueueUserACLInfo> listAclInfo = yarnClient.getQueueAclsInfo();
-    for (QueueUserACLInfo aclInfo : listAclInfo) {
-      for (QueueACL userAcl : aclInfo.getUserAcls()) {
-        LOG.info("User ACL Info for Queue"
-            + ", queueName=" + aclInfo.getQueueName()			
-            + ", userAcl=" + userAcl.name());
+      List<QueueUserACLInfo> listAclInfo = yarnClient.getQueueAclsInfo();
+      for (QueueUserACLInfo aclInfo : listAclInfo) {
+        for (QueueACL userAcl : aclInfo.getUserAcls()) {
+          LOG.info("User ACL Info for Queue"
+              + ", queueName=" + aclInfo.getQueueName()
+              + ", userAcl=" + userAcl.name());
+        }
       }
-    }		
+    }
 
     if (domainId != null && domainId.length() > 0 && toCreateDomain) {
       prepareTimelineDomain();
@@ -698,7 +700,9 @@ public class Client {
     appContext.setPriority(pri);
 
     // Set the queue to which this application is to be submitted in the RM
-    appContext.setQueue(amQueue);
+    if (queueInfo != null) {
+      appContext.setQueue(amQueue);
+    }
 
     // Submit the application to the applications manager
     // SubmitApplicationResponse submitResp = applicationsManager.submitApplication(appRequest);
