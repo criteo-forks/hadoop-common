@@ -198,6 +198,41 @@ public abstract class NMStateStoreService extends AbstractService {
     }
   }
 
+  /**
+   * Recovered states for AMRMProxy.
+   */
+  public static class RecoveredAMRMProxyState {
+    private MasterKey currentMasterKey;
+    private MasterKey nextMasterKey;
+    // For each app, stores amrmToken, user name, as well as various AMRMProxy
+    // intercepter states
+    private Map<ApplicationAttemptId, Map<String, byte[]>> appContexts;
+
+    public RecoveredAMRMProxyState() {
+      appContexts = new HashMap<>();
+    }
+
+    public MasterKey getCurrentMasterKey() {
+      return currentMasterKey;
+    }
+
+    public MasterKey getNextMasterKey() {
+      return nextMasterKey;
+    }
+
+    public Map<ApplicationAttemptId, Map<String, byte[]>> getAppContexts() {
+      return appContexts;
+    }
+
+    public void setCurrentMasterKey(MasterKey currentKey) {
+      currentMasterKey = currentKey;
+    }
+
+    public void setNextMasterKey(MasterKey nextKey) {
+      nextMasterKey = nextKey;
+    }
+  }
+
   /** Initialize the state storage */
   @Override
   public void serviceInit(Configuration conf) throws IOException {
@@ -491,6 +526,14 @@ public abstract class NMStateStoreService extends AbstractService {
    * @throws IOException
    */
   public abstract void removeLogDeleter(ApplicationId appId)
+      throws IOException;
+
+  /**
+   * Load the state of AMRMProxy.
+   * @return recovered state of AMRMProxy
+   * @throws IOException if fails
+   */
+  public abstract RecoveredAMRMProxyState loadAMRMProxyState()
       throws IOException;
 
 

@@ -1657,6 +1657,31 @@ public class YarnConfiguration extends Configuration {
 
   public static final int DEFAULT_FEDERATION_STATESTORE_SQL_MAXCONNECTIONS = 1;
 
+  /** The setting that controls whether AMRMProxy is enabled or not. */
+  public static final String AMRM_PROXY_ENABLED = NM_PREFIX
+      + "amrmproxy.enabled";
+  public static final boolean DEFAULT_AMRM_PROXY_ENABLED = false;
+
+  public static final String AMRM_PROXY_ADDRESS = NM_PREFIX
+      + "amrmproxy.address";
+  public static final int DEFAULT_AMRM_PROXY_PORT = 8049;
+  public static final String DEFAULT_AMRM_PROXY_ADDRESS = "0.0.0.0:"
+      + DEFAULT_AMRM_PROXY_PORT;
+
+  public static final String AMRM_PROXY_CLIENT_THREAD_COUNT = NM_PREFIX
+      + "amrmproxy.client.thread-count";
+  public static final int DEFAULT_AMRM_PROXY_CLIENT_THREAD_COUNT = 3;
+
+  public static final String AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE =
+      NM_PREFIX + "amrmproxy.interceptor-class.pipeline";
+  public static final String DEFAULT_AMRM_PROXY_INTERCEPTOR_CLASS_PIPELINE =
+      "org.apache.hadoop.yarn.server.nodemanager.amrmproxy."
+          + "DefaultRequestInterceptor";
+  public static final String AMRM_PROXY_HA_ENABLED = NM_PREFIX
+      + "amrmproxy.ha.enable";
+  public static final boolean DEFAULT_AMRM_PROXY_HA_ENABLED = false;
+
+
   ////////////////////////////////
   // Other Configs
   ////////////////////////////////

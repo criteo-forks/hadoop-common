@@ -31,6 +31,22 @@ public class ResourcePBImpl extends Resource {
   ResourceProto proto = ResourceProto.getDefaultInstance();
   ResourceProto.Builder builder = null;
   boolean viaProto = false;
+
+  // call via ProtoUtils.convertToProtoFormat(Resource)
+  static ResourceProto getProto(Resource r) {
+    final ResourcePBImpl pb;
+    if (r instanceof ResourcePBImpl) {
+      pb = (ResourcePBImpl) r;
+    } else {
+      pb = new ResourcePBImpl();
+      pb.setMemorySize(r.getMemorySize());
+      pb.setVirtualCores(r.getVirtualCores());
+      for(ResourceInformation res : r.getResources()) {
+        pb.setResourceInformation(res.getName(), res);
+      }
+    }
+    return pb.getProto();
+  }
   
   public ResourcePBImpl() {
     builder = ResourceProto.newBuilder();
@@ -62,9 +78,27 @@ public class ResourcePBImpl extends Resource {
   }
 
   @Override
+  public long getMemorySize() {
+    // memory should always be present
+    ResourceInformation ri = resources[MEMORY_INDEX];
+
+    if (ri.getUnits().isEmpty()) {
+      return ri.getValue();
+    }
+    return UnitsConversionUtil.convert(ri.getUnits(),
+        ResourceInformation.MEMORY_MB.getUnits(), ri.getValue());
+  }
+
+  @Override
   public void setMemory(int memory) {
     maybeInitBuilder();
     builder.setMemory((memory));
+  }
+
+  @Override
+  public void setMemorySize(long memory) {
+    maybeInitBuilder();
+    resources[MEMORY_INDEX].setValue(memory);
   }
 
   @Override

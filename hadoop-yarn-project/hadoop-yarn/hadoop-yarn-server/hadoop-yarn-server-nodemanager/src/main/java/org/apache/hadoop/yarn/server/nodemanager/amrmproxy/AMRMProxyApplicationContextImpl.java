@@ -20,7 +20,6 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -44,7 +43,6 @@ public class AMRMProxyApplicationContextImpl implements AMRMProxyApplicationCont
   private Token<AMRMTokenIdentifier> amrmToken;
   private Token<AMRMTokenIdentifier> localToken;
   private Credentials credentials;
-  private RegistryOperations registry;
 
   /**
    * Create an instance of the AMRMProxyApplicationContext.
@@ -56,14 +54,12 @@ public class AMRMProxyApplicationContextImpl implements AMRMProxyApplicationCont
    * @param amrmToken amrmToken issued by RM
    * @param localToken amrmToken issued by AMRMProxy
    * @param credentials application credentials
-   * @param registry Yarn Registry client
    */
   @SuppressWarnings("checkstyle:parameternumber")
   public AMRMProxyApplicationContextImpl(Context nmContext, Configuration conf,
                                          ApplicationAttemptId applicationAttemptId, String user,
                                          Token<AMRMTokenIdentifier> amrmToken,
-                                         Token<AMRMTokenIdentifier> localToken, Credentials credentials,
-                                         RegistryOperations registry) {
+                                         Token<AMRMTokenIdentifier> localToken, Credentials credentials) {
     this.nmContext = nmContext;
     this.conf = conf;
     this.applicationAttemptId = applicationAttemptId;
@@ -71,7 +67,6 @@ public class AMRMProxyApplicationContextImpl implements AMRMProxyApplicationCont
     this.amrmToken = amrmToken;
     this.localToken = localToken;
     this.credentials = credentials;
-    this.registry = registry;
   }
 
   @Override
@@ -150,10 +145,5 @@ public class AMRMProxyApplicationContextImpl implements AMRMProxyApplicationCont
   @Override
   public Credentials getCredentials() {
     return this.credentials;
-  }
-
-  @Override
-  public RegistryOperations getRegistryClient() {
-    return this.registry;
   }
 }

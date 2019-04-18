@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.registry.client.api.RegistryOperations;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -89,7 +88,6 @@ public class AMRMProxyService extends CompositeService implements ApplicationMas
   private InetSocketAddress listenerEndpoint;
   private AMRMProxyTokenSecretManager secretManager;
   private Map<ApplicationId, RequestInterceptorChainWrapper> applPipelineMap;
-  private RegistryOperations registry;
 
   /**
    * Creates an instance of the service.
@@ -115,15 +113,6 @@ public class AMRMProxyService extends CompositeService implements ApplicationMas
     this.secretManager =
         new AMRMProxyTokenSecretManager(this.nmContext.getNMStateStore());
     this.secretManager.init(conf);
-
-    if (conf.getBoolean(YarnConfiguration.AMRM_PROXY_HA_ENABLED,
-        YarnConfiguration.DEFAULT_AMRM_PROXY_HA_ENABLED)) {
-      this.registry = FederationStateStoreFacade.createInstance(conf,
-          YarnConfiguration.YARN_REGISTRY_CLASS,
-          YarnConfiguration.DEFAULT_YARN_REGISTRY_CLASS,
-          RegistryOperations.class);
-      addService(this.registry);
-    }
 
     super.serviceInit(conf);
   }
@@ -577,12 +566,10 @@ public class AMRMProxyService extends CompositeService implements ApplicationMas
   private AMRMProxyApplicationContext createApplicationMasterContext(
           Context context, ApplicationAttemptId applicationAttemptId, String user,
           Token<AMRMTokenIdentifier> amrmToken,
-          Token<AMRMTokenIdentifier> localToken, Credentials credentials,
-          RegistryOperations registryImpl) {
+          Token<AMRMTokenIdentifier> localToken, Credentials credentials) {
     AMRMProxyApplicationContextImpl appContext =
         new AMRMProxyApplicationContextImpl(context, getConfig(),
-            applicationAttemptId, user, amrmToken, localToken, credentials,
-            registryImpl);
+            applicationAttemptId, user, amrmToken, localToken, credentials);
     return appContext;
   }
 
