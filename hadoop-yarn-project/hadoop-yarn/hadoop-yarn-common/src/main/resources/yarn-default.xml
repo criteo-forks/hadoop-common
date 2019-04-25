@@ -1139,9 +1139,27 @@
   </property>
 
   <property>
+    <description>If yarn.nodemanager.linux-container-executor.cgroups.strict-resource-usage
+      is set to true this flag determines how many times their share of CPU they can use. For
+      example setting it to 1.0f will restrict apps to use only their share of CPU but setting it to 2.0f
+      will authorize apps to use up to 2 times their share of CPU.
+    </description>
+    <name>yarn.nodemanager.linux-container-executor.cgroups.capped-multiplier</name>
+    <value>1.0f</value>
+  </property>
+
+  <property>
     <description>T-file compression types used to compress aggregated logs.</description>
     <name>yarn.nodemanager.log-aggregation.compression-type</name>
     <value>none</value>
+  </property>
+
+  <property>
+    <description>Comma separated list of runtimes that are allowed when using
+    LinuxContainerExecutor. The allowed values are default, docker, and
+    javasandbox.</description>
+    <name>yarn.nodemanager.runtime.linux.allowed-runtimes</name>
+    <value>default</value>
   </property>
 
   <property>
