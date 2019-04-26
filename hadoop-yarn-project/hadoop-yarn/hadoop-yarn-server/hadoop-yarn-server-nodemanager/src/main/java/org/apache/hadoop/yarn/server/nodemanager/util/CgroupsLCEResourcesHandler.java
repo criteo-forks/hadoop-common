@@ -84,7 +84,8 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
   Clock clock;
 
   private float yarnProcessors;
-  
+  private float cappedMultiplier;
+
   public CgroupsLCEResourcesHandler() {
     this.controllerPaths = new HashMap<String, String>();
     clock = new SystemClock();
@@ -122,17 +123,23 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
     }
 
     this.strictResourceUsageMode =
-        conf
-          .getBoolean(
-            YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE,
-            YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE);
+      conf
+        .getBoolean(
+          YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE,
+          YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE);
+
+    this.cappedMultiplier =
+      conf
+        .getFloat(
+          YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER,
+          YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER);
 
     int len = cgroupPrefix.length();
     if (cgroupPrefix.charAt(len - 1) == '/') {
       cgroupPrefix = cgroupPrefix.substring(0, len - 1);
     }
   }
-  
+
   public void init(LinuxContainerExecutor lce) throws IOException {
     this.init(lce,
         ResourceCalculatorPlugin.getResourceCalculatorPlugin(null, conf));
@@ -379,8 +386,8 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
             conf.getInt(YarnConfiguration.NM_VCORES,
               YarnConfiguration.DEFAULT_NM_VCORES);
         if (nodeVCores != containerVCores) {
-          float containerCPU =
-              (containerVCores * yarnProcessors) / (float) nodeVCores;
+          float containerVCoresCapped = Math.min(containerVCores * cappedMultiplier, nodeVCores);
+          float containerCPU = (containerVCoresCapped * yarnProcessors) / (float) nodeVCores;
           int[] limits = getOverallLimits(containerCPU);
           updateCgroup(CONTROLLER_CPU, containerName, CPU_PERIOD_US,
             String.valueOf(limits[0]));
