@@ -44,6 +44,18 @@ public class HAUtil {
   }
 
   /**
+   * Returns true if Federation is configured.
+   *
+   * @param conf Configuration
+   * @return true if federation is configured in the configuration; else false.
+   */
+  public static boolean isFederationEnabled(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.FEDERATION_ENABLED,
+            YarnConfiguration.DEFAULT_FEDERATION_ENABLED);
+  }
+
+
+  /**
    * Returns true if Resource Manager HA is configured.
    *
    * @param conf Configuration

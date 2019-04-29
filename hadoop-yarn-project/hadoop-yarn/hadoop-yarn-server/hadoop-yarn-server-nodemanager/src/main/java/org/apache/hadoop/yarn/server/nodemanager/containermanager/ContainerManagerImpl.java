@@ -105,6 +105,7 @@ import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger;
 import org.apache.hadoop.yarn.server.nodemanager.NMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.nodemanager.NodeManager;
 import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
+import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationContainerInitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
@@ -170,6 +171,8 @@ public class ContainerManagerImpl extends CompositeService implements
   private boolean serviceStopped = false;
   private final ReadLock readLock;
   private final WriteLock writeLock;
+  private AMRMProxyService amrmProxyService;
+  protected boolean amrmProxyEnabled = false;
 
   private long waitForContainersOnShutdownMillis;
 
@@ -230,6 +233,8 @@ public class ContainerManagerImpl extends CompositeService implements
     addIfService(logHandler);
     dispatcher.register(LogHandlerEventType.class, logHandler);
 
+    createAMRMProxyService(conf);
+
     waitForContainersOnShutdownMillis =
         conf.getLong(YarnConfiguration.NM_SLEEP_DELAY_BEFORE_SIGKILL_MS,
             YarnConfiguration.DEFAULT_NM_SLEEP_DELAY_BEFORE_SIGKILL_MS) +
@@ -239,6 +244,22 @@ public class ContainerManagerImpl extends CompositeService implements
 
     super.serviceInit(conf);
     recover();
+  }
+
+  protected void createAMRMProxyService(Configuration conf) {
+    this.amrmProxyEnabled =
+            conf.getBoolean(YarnConfiguration.AMRM_PROXY_ENABLED,
+                    YarnConfiguration.DEFAULT_AMRM_PROXY_ENABLED);
+
+    if (amrmProxyEnabled) {
+      LOG.info("AMRMProxyService is enabled. "
+              + "All the AM->RM requests will be intercepted by the proxy");
+      this.setAMRMProxyService(
+              new AMRMProxyService(this.context, this.dispatcher));
+      addService(this.getAMRMProxyService());
+    } else {
+      LOG.info("AMRMProxyService is disabled");
+    }
   }
 
   @SuppressWarnings("unchecked")
@@ -1176,5 +1197,15 @@ public class ContainerManagerImpl extends CompositeService implements
 
   public Map<String, ByteBuffer> getAuxServiceMetaData() {
     return this.auxiliaryServices.getMetaData();
+  }
+
+  @Private
+  public AMRMProxyService getAMRMProxyService() {
+    return this.amrmProxyService;
+  }
+
+  @Private
+  protected void setAMRMProxyService(AMRMProxyService amrmProxyService) {
+    this.amrmProxyService = amrmProxyService;
   }
 }
