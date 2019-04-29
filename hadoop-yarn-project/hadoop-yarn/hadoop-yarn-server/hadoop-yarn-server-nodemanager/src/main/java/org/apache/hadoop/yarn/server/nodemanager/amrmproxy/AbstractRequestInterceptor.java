@@ -20,8 +20,14 @@ package org.apache.hadoop.yarn.server.nodemanager.amrmproxy;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
+import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateRequest;
+import org.apache.hadoop.yarn.server.api.protocolrecords.DistributedSchedulingAllocateResponse;
+import org.apache.hadoop.yarn.server.api.protocolrecords.RegisterDistributedSchedulingAMResponse;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService;
 
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -109,6 +115,42 @@ public abstract class AbstractRequestInterceptor implements RequestInterceptor {
    */
   public AMRMProxyApplicationContext getApplicationContext() {
     return this.appContext;
+  }
+
+
+  /**
+   * Default implementation that invokes the distributed scheduling version
+   * of the register method.
+   *
+   * @param request ApplicationMaster allocate request
+   * @return Distribtued Scheduler Allocate Response
+   * @throws YarnException if fails
+   * @throws IOException if fails
+   */
+  @Override
+  public DistributedSchedulingAllocateResponse allocateForDistributedScheduling(
+      DistributedSchedulingAllocateRequest request)
+      throws YarnException, IOException {
+    return (this.nextInterceptor != null) ?
+        this.nextInterceptor.allocateForDistributedScheduling(request) : null;
+  }
+
+  /**
+   * Default implementation that invokes the distributed scheduling version
+   * of the allocate method.
+   *
+   * @param request ApplicationMaster registration request
+   * @return Distributed Scheduler Register Response
+   * @throws YarnException if fails
+   * @throws IOException if fails
+   */
+  @Override
+  public RegisterDistributedSchedulingAMResponse
+  registerApplicationMasterForDistributedScheduling(
+      RegisterApplicationMasterRequest request)
+      throws YarnException, IOException {
+    return (this.nextInterceptor != null) ? this.nextInterceptor
+        .registerApplicationMasterForDistributedScheduling(request) : null;
   }
 
   /**
