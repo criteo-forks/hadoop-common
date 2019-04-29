@@ -23,13 +23,8 @@ import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -54,6 +49,7 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDelet
 import org.apache.hadoop.yarn.proto.YarnServiceProtos.StartContainerRequestProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
+import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.utils.LeveldbIterator;
@@ -107,6 +103,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private static final String CURRENT_MASTER_KEY_SUFFIX = "CurrentMasterKey";
   private static final String PREV_MASTER_KEY_SUFFIX = "PreviousMasterKey";
+  private static final String NEXT_MASTER_KEY_SUFFIX = "NextMasterKey";
   private static final String NM_TOKENS_KEY_PREFIX = "NMTokens/";
   private static final String NM_TOKENS_CURRENT_MASTER_KEY =
       NM_TOKENS_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX;
@@ -121,10 +118,13 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   private static final String LOG_DELETER_KEY_PREFIX = "LogDeleters/";
 
+  private static final String AMRMPROXY_KEY_PREFIX = "AMRMProxy/";
+
   private static final byte[] EMPTY_VALUE = new byte[0];
 
   private DB db;
   private boolean isNewlyCreated;
+  private boolean isHealthy;
   private Timer compactionTimer;
 
   public NMLeveldbStateStoreService() {
@@ -133,6 +133,8 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
 
   @Override
   protected void startStorage() throws IOException {
+    // Assume that we're healthy when we start
+    isHealthy = true;
   }
 
   @Override
@@ -151,6 +153,36 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     return isNewlyCreated;
   }
 
+  /**
+   * If the state store throws an error after recovery has been performed
+   * then we can not trust it any more to reflect the NM state. We need to
+   * mark the store and node unhealthy.
+   * Errors during the recovery will cause a service failure and thus a NM
+   * start failure. Do not need to mark the store unhealthy for those.
+   * @param dbErr Exception
+   */
+  private void markStoreUnHealthy(DBException dbErr) {
+      // Always log the error here, we might not see the error in the caller
+      LOG.error("Statestore exception: ", dbErr);
+      // We have already been marked unhealthy so no need to do it again.
+      if (!isHealthy) {
+          return;
+      }
+      // Mark unhealthy, an out of band heartbeat will be sent and the state
+      // will remain unhealthy (not recoverable).
+      // No need to close the store: does not make any difference at this point.
+      isHealthy = false;
+      // We could get here before the nodeStatusUpdater is set
+      NodeStatusUpdater nsu = getNodeStatusUpdater();
+      if (nsu != null) {
+          nsu.reportException(dbErr);
+      }
+  }
+
+  @VisibleForTesting
+  boolean isHealthy() {
+      return isHealthy;
+  }
 
   @Override
   public List<RecoveredContainerState> loadContainersState()
@@ -254,6 +286,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
       db.put(bytes(key),
         ((StartContainerRequestPBImpl) startRequest).getProto().toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -266,6 +299,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), bytes(diagnostics.toString()));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -278,6 +312,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), EMPTY_VALUE);
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -290,6 +325,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), EMPTY_VALUE);
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -302,6 +338,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), bytes(Integer.toString(exitCode)));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -323,6 +360,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -362,6 +400,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         state.finishedApplications.add(appId);
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     } finally {
       if (iter != null) {
@@ -379,6 +418,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), p.toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -390,6 +430,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), new byte[0]);
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -409,6 +450,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -446,6 +488,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
             key.substring(0, userEndPos+1)));
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     } finally {
       if (iter != null) {
@@ -565,6 +608,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), proto.toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -588,6 +632,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -611,6 +656,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         batch.close();
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -676,6 +722,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), taskProto.toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -686,6 +733,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -725,6 +773,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         }
       }
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     } finally {
       if (iter != null) {
@@ -759,6 +808,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -773,6 +823,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(dbKey), pb.getProto().toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -846,6 +897,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), bytes(expTime.toString()));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -857,6 +909,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -907,6 +960,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.put(bytes(key), proto.toByteArray());
     } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -917,6 +971,184 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
     try {
       db.delete(bytes(key));
     } catch (DBException e) {
+      markStoreUnHealthy(e);
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public RecoveredAMRMProxyState loadAMRMProxyState() throws IOException {
+    RecoveredAMRMProxyState result = new RecoveredAMRMProxyState();
+    Set<String> unknownKeys = new HashSet<>();
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(AMRMPROXY_KEY_PREFIX));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.peekNext();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(AMRMPROXY_KEY_PREFIX)) {
+          break;
+        }
+
+        String suffix = key.substring(AMRMPROXY_KEY_PREFIX.length());
+        if (suffix.equals(CURRENT_MASTER_KEY_SUFFIX)) {
+          iter.next();
+          result.setCurrentMasterKey(parseMasterKey(entry.getValue()));
+          LOG.info("Recovered for AMRMProxy: current master key id "
+                  + result.getCurrentMasterKey().getKeyId());
+
+        } else if (suffix.equals(NEXT_MASTER_KEY_SUFFIX)) {
+          iter.next();
+          result.setNextMasterKey(parseMasterKey(entry.getValue()));
+          LOG.info("Recovered for AMRMProxy: next master key id "
+                  + result.getNextMasterKey().getKeyId());
+
+        } else { // Load AMRMProxy application context map for an app attempt
+          // Parse appAttemptId, also handle the unknown keys
+          int idEndPos;
+          ApplicationAttemptId attemptId;
+          try {
+            idEndPos = key.indexOf('/', AMRMPROXY_KEY_PREFIX.length());
+            if (idEndPos < 0) {
+              throw new IOException(
+                      "Unable to determine attemptId in key: " + key);
+            }
+            attemptId = ApplicationAttemptId.fromString(
+                    key.substring(AMRMPROXY_KEY_PREFIX.length(), idEndPos));
+          } catch (Exception e) {
+            // Try to move on for back-forward compatibility
+            LOG.warn("Unknown key " + key + ", remove and move on", e);
+            // Do this because iter.remove() is not supported here
+            unknownKeys.add(key);
+            continue;
+          }
+          // Parse the context map for the appAttemptId
+          Map<String, byte[]> appContext =
+                  loadAMRMProxyAppContextMap(iter, key.substring(0, idEndPos + 1));
+          result.getAppContexts().put(attemptId, appContext);
+
+          LOG.info("Recovered for AMRMProxy: " + attemptId + ", map size "
+                  + appContext.size());
+        }
+      }
+    } catch (DBException e) {
+      markStoreUnHealthy(e);
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+
+    // Delete all unknown keys
+    try {
+      for (String key : unknownKeys) {
+        db.delete(bytes(key));
+      }
+    } catch (DBException e) {
+      throw new IOException(e);
+    }
+
+    return result;
+  }
+
+  private Map<String, byte[]> loadAMRMProxyAppContextMap(LeveldbIterator iter,
+                                                         String keyPrefix) throws IOException {
+    Map<String, byte[]> appContextMap = new HashMap<>();
+    while (iter.hasNext()) {
+      Entry<byte[], byte[]> entry = iter.peekNext();
+      String key = asString(entry.getKey());
+      if (!key.startsWith(keyPrefix)) {
+        break;
+      }
+      iter.next();
+      String suffix = key.substring(keyPrefix.length());
+      byte[] data = entry.getValue();
+      appContextMap.put(suffix, Arrays.copyOf(data, data.length));
+    }
+    return appContextMap;
+  }
+
+  @Override
+  public void storeAMRMProxyCurrentMasterKey(MasterKey key) throws IOException {
+    storeMasterKey(AMRMPROXY_KEY_PREFIX + CURRENT_MASTER_KEY_SUFFIX, key);
+  }
+
+  @Override
+  public void storeAMRMProxyNextMasterKey(MasterKey key) throws IOException {
+    String dbkey = AMRMPROXY_KEY_PREFIX + NEXT_MASTER_KEY_SUFFIX;
+    if (key == null) {
+      // When key is null, delete the entry instead
+      try {
+        db.delete(bytes(dbkey));
+      } catch (DBException e) {
+        markStoreUnHealthy(e);
+        throw new IOException(e);
+      }
+      return;
+    }
+    storeMasterKey(dbkey, key);
+  }
+
+  @Override
+  public void storeAMRMProxyAppContextEntry(ApplicationAttemptId attempt,
+                                            String key, byte[] data) throws IOException {
+    String fullkey = AMRMPROXY_KEY_PREFIX + attempt + "/" + key;
+    try {
+      db.put(bytes(fullkey), data);
+    } catch (DBException e) {
+      markStoreUnHealthy(e);
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeAMRMProxyAppContextEntry(ApplicationAttemptId attempt,
+                                             String key) throws IOException {
+    String fullkey = AMRMPROXY_KEY_PREFIX + attempt + "/" + key;
+    try {
+      db.delete(bytes(fullkey));
+    } catch (DBException e) {
+      markStoreUnHealthy(e);
+      throw new IOException(e);
+    }
+  }
+
+  @Override
+  public void removeAMRMProxyAppContext(ApplicationAttemptId attempt)
+          throws IOException {
+    Set<String> candidates = new HashSet<>();
+    String keyPrefix = AMRMPROXY_KEY_PREFIX + attempt + "/";
+    LeveldbIterator iter = null;
+    try {
+      iter = new LeveldbIterator(db);
+      iter.seek(bytes(keyPrefix));
+      while (iter.hasNext()) {
+        Entry<byte[], byte[]> entry = iter.next();
+        String key = asString(entry.getKey());
+        if (!key.startsWith(keyPrefix)) {
+          break;
+        }
+        // Do this because iter.remove() is not supported here
+        candidates.add(key);
+      }
+    } catch (DBException e) {
+      markStoreUnHealthy(e);
+      throw new IOException(e);
+    } finally {
+      if (iter != null) {
+        iter.close();
+      }
+    }
+
+    // Delete all candidate keys
+    try {
+      for (String key : candidates) {
+        db.delete(bytes(key));
+      }
+    } catch (DBException e) {
+      markStoreUnHealthy(e);
       throw new IOException(e);
     }
   }
@@ -1072,5 +1304,15 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         "Incompatible version for NM state: expecting NM state version " 
             + getCurrentVersion() + ", but loading version " + loadedVersion);
     }
+  }
+
+  @VisibleForTesting
+  DB getDB() {
+    return db;
+  }
+
+  @VisibleForTesting
+  void setDB(DB testDb) {
+    this.db = testDb;
   }
 }

@@ -85,5 +85,4 @@ public interface Context {
 
   NodeStatusUpdater getNodeStatusUpdater();
 
-  boolean isDistributedSchedulingEnabled();
 }

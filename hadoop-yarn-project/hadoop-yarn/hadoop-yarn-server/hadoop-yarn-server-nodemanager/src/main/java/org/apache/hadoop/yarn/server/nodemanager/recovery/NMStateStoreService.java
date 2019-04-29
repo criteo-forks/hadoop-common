@@ -40,13 +40,24 @@ import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.Deletion
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LocalizedResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.LogDeleterProto;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
+import org.apache.hadoop.yarn.server.nodemanager.NodeStatusUpdater;
 
 @Private
 @Unstable
 public abstract class NMStateStoreService extends AbstractService {
 
+  private NodeStatusUpdater nodeStatusUpdater = null;
+
   public NMStateStoreService(String name) {
     super(name);
+  }
+
+  protected NodeStatusUpdater getNodeStatusUpdater() {
+    return nodeStatusUpdater;
+  }
+
+  public void setNodeStatusUpdater(NodeStatusUpdater nodeStatusUpdater) {
+    this.nodeStatusUpdater = nodeStatusUpdater;
   }
 
   public static class RecoveredApplicationsState {
@@ -562,7 +573,6 @@ public abstract class NMStateStoreService extends AbstractService {
   public abstract void storeAMRMProxyAppContextEntry(
       ApplicationAttemptId attempt, String key, byte[] data) throws IOException;
 
-
   /**
    * Remove a context entry for an application attempt in AMRMProxyService.
    * @param attempt attempt ID
@@ -571,6 +581,15 @@ public abstract class NMStateStoreService extends AbstractService {
    */
   public abstract void removeAMRMProxyAppContextEntry(
       ApplicationAttemptId attempt, String key) throws IOException;
+
+  /**
+   * Remove the entire context map for an application attempt in
+   * AMRMProxyService.
+   * @param attempt attempt ID
+   * @throws IOException if fails
+   */
+  public abstract void removeAMRMProxyAppContext(ApplicationAttemptId attempt)
+          throws IOException;
 
 
   protected abstract void initStorage(Configuration conf) throws IOException;

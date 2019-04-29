@@ -42,7 +42,6 @@ public class AMRMProxyApplicationContextImpl implements AMRMProxyApplicationCont
   private Integer localTokenKeyId;
   private Token<AMRMTokenIdentifier> amrmToken;
   private Token<AMRMTokenIdentifier> localToken;
-  private Credentials credentials;
 
   /**
    * Create an instance of the AMRMProxyApplicationContext.
@@ -53,20 +52,18 @@ public class AMRMProxyApplicationContextImpl implements AMRMProxyApplicationCont
    * @param user user name of the application
    * @param amrmToken amrmToken issued by RM
    * @param localToken amrmToken issued by AMRMProxy
-   * @param credentials application credentials
    */
   @SuppressWarnings("checkstyle:parameternumber")
   public AMRMProxyApplicationContextImpl(Context nmContext, Configuration conf,
                                          ApplicationAttemptId applicationAttemptId, String user,
                                          Token<AMRMTokenIdentifier> amrmToken,
-                                         Token<AMRMTokenIdentifier> localToken, Credentials credentials) {
+                                         Token<AMRMTokenIdentifier> localToken) {
     this.nmContext = nmContext;
     this.conf = conf;
     this.applicationAttemptId = applicationAttemptId;
     this.user = user;
     this.amrmToken = amrmToken;
     this.localToken = localToken;
-    this.credentials = credentials;
   }
 
   @Override
@@ -142,8 +139,4 @@ public class AMRMProxyApplicationContextImpl implements AMRMProxyApplicationCont
     return nmContext;
   }
 
-  @Override
-  public Credentials getCredentials() {
-    return this.credentials;
-  }
 }

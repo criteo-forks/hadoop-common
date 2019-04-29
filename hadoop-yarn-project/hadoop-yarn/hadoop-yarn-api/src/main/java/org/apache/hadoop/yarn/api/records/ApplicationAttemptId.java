@@ -43,6 +43,9 @@ public abstract class ApplicationAttemptId implements
   @Unstable
   public static final String appAttemptIdStrPrefix = "appattempt_";
 
+  private static final String APP_ATTEMPT_ID_PREFIX = appAttemptIdStrPrefix
+          + '_';
+
   @Private
   @Unstable
   public static ApplicationAttemptId newInstance(ApplicationId appId,
@@ -139,4 +142,36 @@ public abstract class ApplicationAttemptId implements
   }
 
   protected abstract void build();
+
+  @Public
+  @Stable
+  public static ApplicationAttemptId fromString(String appAttemptIdStr) {
+    if (!appAttemptIdStr.startsWith(APP_ATTEMPT_ID_PREFIX)) {
+      throw new IllegalArgumentException("Invalid AppAttemptId prefix: "
+              + appAttemptIdStr);
+    }
+    try {
+      int pos1 = APP_ATTEMPT_ID_PREFIX.length() - 1;
+      int pos2 = appAttemptIdStr.indexOf('_', pos1 + 1);
+      if (pos2 < 0) {
+        throw new IllegalArgumentException("Invalid AppAttemptId: "
+                + appAttemptIdStr);
+      }
+      long rmId = Long.parseLong(appAttemptIdStr.substring(pos1 + 1, pos2));
+      int pos3 = appAttemptIdStr.indexOf('_', pos2 + 1);
+      if (pos3 < 0) {
+        throw new IllegalArgumentException("Invalid AppAttemptId: "
+                + appAttemptIdStr);
+      }
+      int appId = Integer.parseInt(appAttemptIdStr.substring(pos2 + 1, pos3));
+      ApplicationId applicationId = ApplicationId.newInstance(rmId, appId);
+      int attemptId = Integer.parseInt(appAttemptIdStr.substring(pos3 + 1));
+      ApplicationAttemptId applicationAttemptId =
+              ApplicationAttemptId.newInstance(applicationId, attemptId);
+      return applicationAttemptId;
+    } catch (NumberFormatException n) {
+      throw new IllegalArgumentException("Invalid AppAttemptId: "
+              + appAttemptIdStr, n);
+    }
+  }
 }

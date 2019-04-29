@@ -213,31 +213,9 @@ public class AMRMProxyService extends CompositeService implements ApplicationMas
         Token<AMRMTokenIdentifier> localToken =
             this.secretManager.createAndGetAMRMToken(attemptId);
 
-        // Retrieve the AM container credentials from NM context
-        Credentials amCred = null;
-        for (Container container : this.nmContext.getContainers().values()) {
-          LOG.debug("From NM Context container " + container.getContainerId());
-          if (container.getContainerId().getApplicationAttemptId().equals(
-              attemptId) && container.getContainerTokenIdentifier() != null) {
-            LOG.debug("Container type "
-                + container.getContainerTokenIdentifier().getContainerType());
-            if (container.getContainerTokenIdentifier()
-                .getContainerType() == ContainerType.APPLICATION_MASTER) {
-              LOG.info("AM container {} found in context, has credentials: {}",
-                  container.getContainerId(),
-                  (container.getCredentials() != null));
-              amCred = container.getCredentials();
-            }
-          }
-        }
-        if (amCred == null) {
-          LOG.error("No credentials found for AM container of {}. "
-              + "Yarn registry access might not work", attemptId);
-        }
-
         // Create the intercepter pipeline for the AM
         initializePipeline(attemptId, user, amrmToken, localToken,
-            entry.getValue(), true, amCred);
+            entry.getValue(), true);
       } catch (Throwable e) {
         LOG.error("Exception when recovering " + attemptId
             + ", removing it from NMStateStore and move on", e);
@@ -345,7 +323,7 @@ public class AMRMProxyService extends CompositeService implements ApplicationMas
 
     initializePipeline(appAttemptId,
         containerTokenIdentifierForKey.getApplicationSubmitter(), amrmToken,
-        localToken, null, false, credentials);
+        localToken, null, false);
   }
 
   /**
@@ -361,8 +339,7 @@ public class AMRMProxyService extends CompositeService implements ApplicationMas
   protected void initializePipeline(ApplicationAttemptId applicationAttemptId,
                                     String user, Token<AMRMTokenIdentifier> amrmToken,
                                     Token<AMRMTokenIdentifier> localToken,
-                                    Map<String, byte[]> recoveredDataMap, boolean isRecovery,
-                                    Credentials credentials) {
+                                    Map<String, byte[]> recoveredDataMap, boolean isRecovery) {
     RequestInterceptorChainWrapper chainWrapper = null;
     synchronized (applPipelineMap) {
       if (applPipelineMap
@@ -426,7 +403,7 @@ public class AMRMProxyService extends CompositeService implements ApplicationMas
           this.createRequestInterceptorChain();
       interceptorChain.init(
           createApplicationMasterContext(this.nmContext, applicationAttemptId,
-              user, amrmToken, localToken, credentials, this.registry));
+              user, amrmToken, localToken));
       if (isRecovery) {
         if (recoveredDataMap == null) {
           throw new YarnRuntimeException(
@@ -566,10 +543,10 @@ public class AMRMProxyService extends CompositeService implements ApplicationMas
   private AMRMProxyApplicationContext createApplicationMasterContext(
           Context context, ApplicationAttemptId applicationAttemptId, String user,
           Token<AMRMTokenIdentifier> amrmToken,
-          Token<AMRMTokenIdentifier> localToken, Credentials credentials) {
+          Token<AMRMTokenIdentifier> localToken) {
     AMRMProxyApplicationContextImpl appContext =
         new AMRMProxyApplicationContextImpl(context, getConfig(),
-            applicationAttemptId, user, amrmToken, localToken, credentials);
+            applicationAttemptId, user, amrmToken, localToken);
     return appContext;
   }
 
@@ -647,11 +624,6 @@ public class AMRMProxyService extends CompositeService implements ApplicationMas
         StringUtils.getStringCollection(configuredInterceptorClassNames);
     for (String item : tempList) {
       interceptorClassNames.add(item.trim());
-    }
-
-    // Make sure DistributedScheduler is present at the beginning of the chain.
-    if (this.nmContext.isDistributedSchedulingEnabled()) {
-      interceptorClassNames.add(0, DistributedScheduler.class.getName());
     }
 
     return interceptorClassNames;
