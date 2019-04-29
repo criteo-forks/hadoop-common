@@ -152,27 +152,6 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
     }
   }
 
-  private void updateParameters(
-      RegisterDistributedSchedulingAMResponse registerResponse) {
-    Resource incrementResource = registerResponse.getIncrContainerResource();
-    if (incrementResource == null) {
-      incrementResource = registerResponse.getMinContainerResource();
-    }
-    oppContainerContext.updateAllocationParams(
-        registerResponse.getMinContainerResource(),
-        registerResponse.getMaxContainerResource(),
-        incrementResource,
-        registerResponse.getContainerTokenExpiryInterval());
-
-    oppContainerContext.getContainerIdGenerator()
-        .resetContainerIdCounter(registerResponse.getContainerIdStart());
-    setNodeList(registerResponse.getNodesForScheduling());
-  }
-
-  private void setNodeList(List<RemoteNode> nodeList) {
-    oppContainerContext.updateNodeList(nodeList);
-  }
-
   @Override
   public RegisterDistributedSchedulingAMResponse
       registerApplicationMasterForDistributedScheduling(
@@ -182,7 +161,6 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
         "Distributed Scheduler Service on YARN RM");
     RegisterDistributedSchedulingAMResponse dsResp = getNextInterceptor()
         .registerApplicationMasterForDistributedScheduling(request);
-    updateParameters(dsResp);
     return dsResp;
   }
 
@@ -191,21 +169,7 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
       DistributedSchedulingAllocateRequest request)
       throws YarnException, IOException {
 
-    // Partition requests to GUARANTEED and OPPORTUNISTIC.
-    OpportunisticContainerAllocator.PartitionedResourceRequests
-        partitionedAsks = containerAllocator
-        .partitionAskList(request.getAllocateRequest().getAskList());
-
-    // Allocate OPPORTUNISTIC containers.
-    List<Container> allocatedContainers =
-        containerAllocator.allocateContainers(
-            request.getAllocateRequest().getResourceBlacklistRequest(),
-            partitionedAsks.getOpportunistic(), applicationAttemptId,
-            oppContainerContext, rmIdentifier, appSubmitter);
-
-    // Prepare request for sending to RM for scheduling GUARANTEED containers.
-    request.setAllocatedContainers(allocatedContainers);
-    request.getAllocateRequest().setAskList(partitionedAsks.getGuaranteed());
+    //request.setAllocatedContainers(new ArrayList<Container>());
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Forwarding allocate request to the" +
@@ -216,16 +180,10 @@ public final class DistributedScheduler extends AbstractRequestInterceptor {
         getNextInterceptor().allocateForDistributedScheduling(request);
 
     // Update host to nodeId mapping
-    setNodeList(dsResp.getNodesForScheduling());
     List<NMToken> nmTokens = dsResp.getAllocateResponse().getNMTokens();
     for (NMToken nmToken : nmTokens) {
       nodeTokens.put(nmToken.getNodeId(), nmToken);
     }
-
-    // Check if we have NM tokens for all the allocated containers. If not
-    // generate one and update the response.
-    updateAllocateResponse(
-        dsResp.getAllocateResponse(), nmTokens, allocatedContainers);
 
     return dsResp;
   }

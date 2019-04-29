@@ -43,7 +43,6 @@ import org.apache.hadoop.yarn.server.federation.policies.amrmproxy.FederationAMR
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.resolver.SubClusterResolver;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
-import org.apache.hadoop.yarn.server.federation.utils.FederationRegistryClient;
 import org.apache.hadoop.yarn.server.federation.utils.FederationStateStoreFacade;
 import org.apache.hadoop.yarn.server.uam.UnmanagedAMPoolManager;
 import org.apache.hadoop.yarn.server.utils.AMRMClientUtils;
@@ -146,8 +145,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
    */
   private UserGroupInformation appOwner;
 
-  private FederationRegistryClient registryClient;
-
   /**
    * Creates an instance of the FederationInterceptor class.
    */
@@ -181,15 +178,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
           UserGroupInformation.getCurrentUser());
     } catch (Exception ex) {
       throw new YarnRuntimeException(ex);
-    }
-
-    if (appContext.getRegistryClient() != null) {
-      this.registryClient = new FederationRegistryClient(conf,
-          appContext.getRegistryClient(), this.appOwner);
-      // Add all app tokens for Yarn Registry access
-      if (appContext.getCredentials() != null) {
-        this.appOwner.addCredentials(appContext.getCredentials());
-      }
     }
 
     this.homeSubClusterId =
@@ -237,28 +225,21 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
       // Recover UAM amrmTokens from registry or NMSS
       Map<String, Token<AMRMTokenIdentifier>> uamMap;
-      if (this.registryClient != null) {
-        uamMap = this.registryClient
-            .loadStateFromRegistry(attemptId.getApplicationId());
-        LOG.info("Found {} existing UAMs for application {} in Yarn Registry",
-            uamMap.size(), attemptId.getApplicationId());
-      } else {
-        uamMap = new HashMap<>();
-        for (Entry<String, byte[]> entry : recoveredDataMap.entrySet()) {
-          if (entry.getKey().startsWith(NMSS_SECONDARY_SC_PREFIX)) {
-            // entry for subClusterId -> UAM amrmToken
-            String scId =
-                entry.getKey().substring(NMSS_SECONDARY_SC_PREFIX.length());
-            Token<AMRMTokenIdentifier> amrmToken = new Token<>();
-            amrmToken.decodeFromUrlString(
-                new String(entry.getValue(), STRING_TO_BYTE_FORMAT));
-            uamMap.put(scId, amrmToken);
-            LOG.debug("Recovered UAM in " + scId + " from NMSS");
-          }
+      uamMap = new HashMap<>();
+      for (Entry<String, byte[]> entry : recoveredDataMap.entrySet()) {
+        if (entry.getKey().startsWith(NMSS_SECONDARY_SC_PREFIX)) {
+          // entry for subClusterId -> UAM amrmToken
+          String scId =
+              entry.getKey().substring(NMSS_SECONDARY_SC_PREFIX.length());
+          Token<AMRMTokenIdentifier> amrmToken = new Token<>();
+          amrmToken.decodeFromUrlString(
+              new String(entry.getValue(), STRING_TO_BYTE_FORMAT));
+          uamMap.put(scId, amrmToken);
+          LOG.debug("Recovered UAM in " + scId + " from NMSS");
         }
-        LOG.info("Found {} existing UAMs for application {} in NMStateStore",
-            uamMap.size(), attemptId.getApplicationId());
       }
+      LOG.info("Found {} existing UAMs for application {} in NMStateStore",
+          uamMap.size(), attemptId.getApplicationId());
 
       // Re-attach the UAMs
       int containers = 0;
@@ -416,7 +397,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
 
     ApplicationId appId =
         getApplicationContext().getApplicationAttemptId().getApplicationId();
-    reAttachUAMAndMergeRegisterResponse(this.amRegistrationResponse, appId);
 
     if (getNMStateStore() != null) {
       try {
@@ -611,10 +591,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       // Clean up UAMs only when the app finishes successfully, so that no more
       // attempt will be launched.
       this.uamPool.stop();
-      if (this.registryClient != null) {
-        this.registryClient.removeAppFromRegistry(getApplicationContext()
-            .getApplicationAttemptId().getApplicationId());
-      }
     }
     return homeResponse;
   }
@@ -642,21 +618,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       threadpool = null;
     }
     super.shutdown();
-  }
-
-  /**
-   * Only for unit test cleanup.
-   */
-  @VisibleForTesting
-  protected void cleanupRegistry() {
-    if (this.registryClient != null) {
-      this.registryClient.cleanAllApplications();
-    }
-  }
-
-  @VisibleForTesting
-  protected FederationRegistryClient getRegistryClient() {
-    return this.registryClient;
   }
 
   /**
@@ -713,95 +674,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       } else {
         homeResponse.setNMTokensFromPreviousAttempts(
             otherResponse.getNMTokensFromPreviousAttempts());
-      }
-    }
-  }
-
-  /**
-   * Try re-attach to all existing and running UAMs in secondary sub-clusters
-   * launched by previous application attempts if any. All running containers in
-   * the UAMs will be combined into the registerResponse. For the first attempt,
-   * the registry will be empty for this application and thus no-op here.
-   */
-  protected void reAttachUAMAndMergeRegisterResponse(
-      RegisterApplicationMasterResponse homeResponse,
-      final ApplicationId appId) {
-
-    if (this.registryClient == null) {
-      // Both AMRMProxy HA and NM work preserving restart is not enabled
-      LOG.warn("registryClient is null, skip attaching existing UAM if any");
-      return;
-    }
-
-    // Load existing running UAMs from the previous attempts from
-    // registry, if any
-    Map<String, Token<AMRMTokenIdentifier>> uamMap =
-        this.registryClient.loadStateFromRegistry(appId);
-    if (uamMap.size() == 0) {
-      LOG.info("No existing UAM for application {} found in Yarn Registry",
-          appId);
-      return;
-    }
-    LOG.info("Found {} existing UAMs for application {} in Yarn Registry. "
-        + "Reattaching in parallel", uamMap.size(), appId);
-
-    ExecutorCompletionService<RegisterApplicationMasterResponse>
-        completionService = new ExecutorCompletionService<>(threadpool);
-
-    for (Entry<String, Token<AMRMTokenIdentifier>> entry : uamMap.entrySet()) {
-      final SubClusterId subClusterId =
-          SubClusterId.newInstance(entry.getKey());
-      final Token<AMRMTokenIdentifier> amrmToken = entry.getValue();
-
-      completionService
-          .submit(new Callable<RegisterApplicationMasterResponse>() {
-            @Override
-            public RegisterApplicationMasterResponse call() throws Exception {
-              RegisterApplicationMasterResponse response = null;
-              try {
-                // Create a config loaded with federation on and subclusterId
-                // for each UAM
-                YarnConfiguration config = new YarnConfiguration(getConf());
-                FederationProxyProviderUtil.updateConfForFederation(config,
-                    subClusterId.getId());
-
-                uamPool.reAttachUAM(subClusterId.getId(), config, appId,
-                    amRegistrationResponse.getQueue(),
-                    getApplicationContext().getUser(), homeSubClusterId.getId(),
-                    amrmToken);
-
-                response = uamPool.registerApplicationMaster(
-                    subClusterId.getId(), amRegistrationRequest);
-
-                if (response != null
-                    && response.getContainersFromPreviousAttempts() != null) {
-                  cacheAllocatedContainers(
-                      response.getContainersFromPreviousAttempts(),
-                      subClusterId);
-                }
-                LOG.info("UAM {} reattached for {}", subClusterId, appId);
-              } catch (Throwable e) {
-                LOG.error(
-                    "Reattaching UAM " + subClusterId + " failed for " + appId,
-                    e);
-              }
-              return response;
-            }
-          });
-    }
-
-    // Wait for the re-attach responses
-    for (int i = 0; i < uamMap.size(); i++) {
-      try {
-        Future<RegisterApplicationMasterResponse> future =
-            completionService.take();
-        RegisterApplicationMasterResponse registerResponse = future.get();
-        if (registerResponse != null) {
-          LOG.info("Merging register response for {}", appId);
-          mergeRegisterResponse(homeResponse, registerResponse);
-        }
-      } catch (Exception e) {
-        LOG.warn("Reattaching UAM failed for ApplicationId: " + appId, e);
       }
     }
   }
@@ -902,17 +774,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       }
     }
 
-    if (!isNullOrEmpty(request.getUpdateRequests())) {
-      for (UpdateContainerRequest ucr : request.getUpdateRequests()) {
-        if (warnIfNotExists(ucr.getContainerId(), "update")) {
-          SubClusterId subClusterId =
-              this.containerIdToSubClusterIdMap.get(ucr.getContainerId());
-          AllocateRequest newRequest = requestMap.get(subClusterId);
-          newRequest.getUpdateRequests().add(ucr);
-        }
-      }
-    }
-
     return requestMap;
   }
 
@@ -980,13 +841,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                 Token<AMRMTokenIdentifier> newToken = ConverterUtils
                     .convertFromYarn(response.getAMRMToken(), (Text) null);
                 // Update the token in registry or NMSS
-                if (registryClient != null) {
-                  registryClient
-                      .writeAMRMTokenForUAM(
-                          getApplicationContext().getApplicationAttemptId()
-                              .getApplicationId(),
-                          subClusterId.getId(), newToken);
-                } else if (getNMStateStore() != null) {
+                if (getNMStateStore() != null) {
                   try {
                     getNMStateStore().storeAMRMProxyAppContextEntry(
                         getApplicationContext().getApplicationAttemptId(),
@@ -1068,7 +923,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                   token = uamPool.launchUAM(subClusterId, config,
                       appContext.getApplicationAttemptId().getApplicationId(),
                       amRegistrationResponse.getQueue(), appContext.getUser(),
-                      homeSubClusterId.toString(), registryClient != null);
+                      homeSubClusterId.toString(), false);
 
                   uamResponse = uamPool.registerApplicationMaster(subClusterId,
                       registerRequest);
@@ -1105,13 +960,7 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
                 uamResponse.getResponse());
 
             // Save the UAM token in registry or NMSS
-            if (registryClient != null) {
-              registryClient.writeAMRMTokenForUAM(
-                  getApplicationContext().getApplicationAttemptId()
-                      .getApplicationId(),
-                  uamResponse.getSubClusterId().getId(),
-                  uamResponse.getUamToken());
-            } else if (getNMStateStore() != null) {
+            if (getNMStateStore() != null) {
               getNMStateStore().storeAMRMProxyAppContextEntry(
                   getApplicationContext().getApplicationAttemptId(),
                   NMSS_SECONDARY_SC_PREFIX
@@ -1304,23 +1153,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
         homeResponse.setNMTokens(otherResponse.getNMTokens());
       }
     }
-
-    if (!isNullOrEmpty(otherResponse.getUpdatedContainers())) {
-      if (!isNullOrEmpty(homeResponse.getUpdatedContainers())) {
-        homeResponse.getUpdatedContainers()
-            .addAll(otherResponse.getUpdatedContainers());
-      } else {
-        homeResponse.setUpdatedContainers(otherResponse.getUpdatedContainers());
-      }
-    }
-
-    if (!isNullOrEmpty(otherResponse.getUpdateErrors())) {
-      if (!isNullOrEmpty(homeResponse.getUpdateErrors())) {
-        homeResponse.getUpdateErrors().addAll(otherResponse.getUpdateErrors());
-      } else {
-        homeResponse.setUpdateErrors(otherResponse.getUpdateErrors());
-      }
-    }
   }
 
   /**
@@ -1405,7 +1237,6 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     blackList.setBlacklistAdditions(new ArrayList<String>());
     blackList.setBlacklistRemovals(new ArrayList<String>());
     request.setResourceBlacklistRequest(blackList);
-    request.setUpdateRequests(new ArrayList<UpdateContainerRequest>());
     return request;
   }
 

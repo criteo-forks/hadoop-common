@@ -27,9 +27,7 @@ import java.util.Map;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
-import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.security.NMTokenIdentifier;
 import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMNullStateStoreService;
@@ -274,6 +272,25 @@ public class NMTokenSecretManagerInNM extends BaseNMTokenSecretManager {
       stateStore.removeNMTokenApplicationMasterKey(attempt);
     } catch (IOException e) {
       LOG.error("Unable to remove master key for application " + attempt, e);
+    }
+  }
+
+  /**
+   * Used by the Distributed Scheduler framework to generate NMTokens
+   * @param applicationSubmitter
+   * @param container
+   * @return NMToken
+   */
+  public NMToken generateNMToken(
+      String applicationSubmitter, Container container) {
+    this.readLock.lock();
+    try {
+      Token token =
+          createNMToken(container.getId().getApplicationAttemptId(),
+              container.getNodeId(), applicationSubmitter);
+      return NMToken.newInstance(container.getNodeId(), token);
+    } finally {
+      this.readLock.unlock();
     }
   }
 }

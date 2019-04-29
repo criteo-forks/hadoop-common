@@ -84,4 +84,6 @@ public interface Context {
       getLogAggregationStatusForApps();
 
   NodeStatusUpdater getNodeStatusUpdater();
+
+  boolean isDistributedSchedulingEnabled();
 }

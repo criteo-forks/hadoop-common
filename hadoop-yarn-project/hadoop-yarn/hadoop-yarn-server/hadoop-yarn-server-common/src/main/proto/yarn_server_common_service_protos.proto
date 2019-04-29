@@ -24,6 +24,7 @@ package hadoop.yarn;
 
 import "yarn_protos.proto";
 import "yarn_server_common_protos.proto";
+import "yarn_service_protos.proto";
 
 message RemoteNodeProto {
   optional NodeIdProto node_id = 1;
@@ -39,6 +40,16 @@ message RegisterDistributedSchedulingAMResponseProto {
   optional int32 container_token_expiry_interval = 5;
   optional int64 container_id_start = 6;
   repeated RemoteNodeProto nodes_for_scheduling = 7;
+}
+
+message DistributedSchedulingAllocateResponseProto {
+  optional AllocateResponseProto allocate_response = 1;
+  repeated RemoteNodeProto nodes_for_scheduling = 2;
+}
+
+message DistributedSchedulingAllocateRequestProto {
+  optional AllocateRequestProto allocate_request = 1;
+  repeated ContainerProto allocated_containers = 2;
 }
 
 message RegisterNodeManagerRequestProto {

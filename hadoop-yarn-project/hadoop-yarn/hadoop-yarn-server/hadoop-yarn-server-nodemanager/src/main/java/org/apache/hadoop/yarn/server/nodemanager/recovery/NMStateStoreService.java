@@ -536,6 +536,42 @@ public abstract class NMStateStoreService extends AbstractService {
   public abstract RecoveredAMRMProxyState loadAMRMProxyState()
       throws IOException;
 
+  /**
+   * Record the next AMRMProxyTokenSecretManager master key.
+   * @param key the next master key
+   * @throws IOException if fails
+   */
+  public abstract void storeAMRMProxyNextMasterKey(MasterKey key)
+      throws IOException;
+
+  /**
+   * Record the current AMRMProxyTokenSecretManager master key.
+   * @param key the current master key
+   * @throws IOException if fails
+   */
+  public abstract void storeAMRMProxyCurrentMasterKey(MasterKey key)
+      throws IOException;
+
+  /**
+   * Add a context entry for an application attempt in AMRMProxyService.
+   * @param attempt app attempt ID
+   * @param key key string
+   * @param data state data to store
+   * @throws IOException if fails
+   */
+  public abstract void storeAMRMProxyAppContextEntry(
+      ApplicationAttemptId attempt, String key, byte[] data) throws IOException;
+
+
+  /**
+   * Remove a context entry for an application attempt in AMRMProxyService.
+   * @param attempt attempt ID
+   * @param key key string
+   * @throws IOException if fails
+   */
+  public abstract void removeAMRMProxyAppContextEntry(
+      ApplicationAttemptId attempt, String key) throws IOException;
+
 
   protected abstract void initStorage(Configuration conf) throws IOException;
 

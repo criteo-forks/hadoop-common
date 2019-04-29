@@ -183,7 +183,7 @@ public abstract class AllocateRequest {
   @Stable
   public abstract void setResourceBlacklistRequest(
       ResourceBlacklistRequest resourceBlacklistRequest);
-  
+
   /**
    * Get the <code>ContainerResourceIncreaseRequest</code> being sent by the
    * <code>ApplicationMaster</code>
