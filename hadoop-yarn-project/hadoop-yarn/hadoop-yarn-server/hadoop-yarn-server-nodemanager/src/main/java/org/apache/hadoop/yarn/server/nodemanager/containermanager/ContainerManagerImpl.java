@@ -740,8 +740,6 @@ public class ContainerManagerImpl extends CompositeService implements
         verifyAndGetContainerTokenIdentifier(request.getContainerToken(),
           containerTokenIdentifier);
         containerId = containerTokenIdentifier.getContainerID();
-        startContainerInternal(nmTokenIdentifier, containerTokenIdentifier,
-          request);
 
         // Initialize the AMRMProxy service instance only if the container is of
         // type AM and if the AMRMProxy service is enabled
@@ -749,6 +747,9 @@ public class ContainerManagerImpl extends CompositeService implements
                 .equals(ContainerType.APPLICATION_MASTER)) {
           this.getAMRMProxyService().processApplicationStartRequest(request);
         }
+
+        startContainerInternal(nmTokenIdentifier, containerTokenIdentifier,
+          request);
 
         succeededContainers.add(containerId);
       } catch (YarnException e) {
