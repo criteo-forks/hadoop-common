@@ -331,7 +331,8 @@ public class HadoopArchiveLogs implements Tool {
           ApplicationReport report = client.getApplicationReport(
               ApplicationId.fromString(app.getAppId()));
           LogAggregationStatus aggStatus = report.getLogAggregationStatus();
-          if (aggStatus.equals(LogAggregationStatus.RUNNING) ||
+          if (aggStatus == null ||
+              aggStatus.equals(LogAggregationStatus.RUNNING) ||
               aggStatus.equals(LogAggregationStatus.RUNNING_WITH_FAILURE) ||
               aggStatus.equals(LogAggregationStatus.NOT_START) ||
               aggStatus.equals(LogAggregationStatus.DISABLED) ||
