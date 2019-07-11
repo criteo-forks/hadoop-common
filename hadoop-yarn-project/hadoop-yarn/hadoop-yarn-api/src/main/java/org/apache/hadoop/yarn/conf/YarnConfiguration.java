@@ -64,10 +64,10 @@ public class YarnConfiguration extends Configuration {
           CORE_SITE_CONFIGURATION_FILE));
 
   @Evolving
-  public static final int APPLICATION_MAX_TAGS = 10;
+  public static final int APPLICATION_MAX_TAGS = 15;
 
   @Evolving
-  public static final int APPLICATION_MAX_TAG_LENGTH = 100;
+  public static final int APPLICATION_MAX_TAG_LENGTH = 200;
 
   static {
     addDeprecatedKeys();
