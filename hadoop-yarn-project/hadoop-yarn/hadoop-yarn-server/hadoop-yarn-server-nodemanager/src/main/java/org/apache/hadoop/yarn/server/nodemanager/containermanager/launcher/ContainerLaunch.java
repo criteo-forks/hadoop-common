@@ -1720,6 +1720,14 @@ public class ContainerLaunch implements Callable<Integer> {
     nmVars.addAll(Apps.getEnvVarsFromInputString(nmAdminUserEnv,
         File.pathSeparator));
 
+    // variables here will be override in.
+    String nmAdminUserEnvOverride = conf.get(
+        YarnConfiguration.NM_ADMIN_USER_ENV_OVERRIDE,
+        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV_OVERRIDE);
+    Apps.overrideEnvFromInputString(environment, nmAdminUserEnvOverride);
+    nmVars.addAll(Apps.getEnvVarsFromInputString(nmAdminUserEnvOverride,
+        File.pathSeparator));
+
     // TODO: Remove Windows check and use this approach on all platforms after
     // additional testing.  See YARN-358.
     if (Shell.WINDOWS) {

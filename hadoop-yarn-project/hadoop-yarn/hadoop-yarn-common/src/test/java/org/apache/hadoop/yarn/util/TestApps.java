@@ -58,4 +58,18 @@ public class TestApps {
     assertEquals("=", environment.get("e1"));
     assertEquals("a1=a2", environment.get("e2"));
   }
+
+  @Test
+  public void testOverrideEnvFromInputString() {
+    Map<String, String> environment = new HashMap<String, String>();
+    environment.put("JAVA_HOME", "/path/jdk");
+    String goodEnv = "a1=1,b_2=2,_c=3,d=4,e=,JAVA_HOME=/test";
+    Apps.overrideEnvFromInputString(environment, goodEnv);
+    assertEquals("1", environment.get("a1"));
+    assertEquals("2", environment.get("b_2"));
+    assertEquals("3", environment.get("_c"));
+    assertEquals("4", environment.get("d"));
+    assertEquals("", environment.get("e"));
+    assertEquals("/test", environment.get("JAVA_HOME"));
+  }
 }
