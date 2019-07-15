@@ -107,6 +107,26 @@ public class Apps {
     }
   }
 
+  public static void overrideEnvFromInputString(Map<String, String> env,
+                                           String envString) {
+    if (envString != null && envString.length() > 0) {
+      Matcher varValMatcher = VARVAL_SPLITTER.matcher(envString);
+      while (varValMatcher.find()) {
+        String envVar = varValMatcher.group(1);
+
+        Matcher m = VAR_SUBBER.matcher(varValMatcher.group(2));
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+          String var = m.group(1);
+          String replace = System.getenv(var);
+          m.appendReplacement(sb, Matcher.quoteReplacement(replace));
+        }
+        m.appendTail(sb);
+        env.put(envVar, sb.toString());
+      }
+    }
+  }
+
   /**
    *
    * @param envString String containing env variable definitions
