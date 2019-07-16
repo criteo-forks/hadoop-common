@@ -23,6 +23,7 @@ import static org.apache.hadoop.yarn.util.StringHelper.join;
 import static org.apache.hadoop.yarn.util.StringHelper.sjoin;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
@@ -168,10 +169,10 @@ public class Apps {
     } else {
       val = val + classPathSeparator + value;
     }
-    environment.put(StringInterner.weakIntern(variable), 
+    environment.put(StringInterner.weakIntern(variable),
         StringInterner.weakIntern(val));
   }
-  
+
   /**
    * This older version of this method is kept around for compatibility
    * because downstream frameworks like Spark and Tez have been using it.
@@ -222,5 +223,22 @@ public class Apps {
     default:
       return true;
     }
+  }
+
+  public static int getHadoopRelease(Map<String, String> environment) {
+    // Return hadoop release from YARN_HADOOP_RELEASE environment variable
+    if (environment.containsKey("YARN_HADOOP_RELEASE")) {
+      try {
+        return Integer.parseInt(environment.get("YARN_HADOOP_RELEASE"));
+      } catch (NumberFormatException ex) {}
+    }
+    // If YARN_HADOOP_RELEASE not available find hadoop release from java cmd line using job CLASSPATH env variable
+    try {
+      String outputCommand = Shell.execCommand(environment,"java", "org.apache.hadoop.util.VersionInfo");
+      String hadoopRelease = outputCommand.split("\n")[0].replace("Hadoop ","").split("\\.")[0];
+      return Integer.parseInt(hadoopRelease);
+    } catch (ArrayIndexOutOfBoundsException | NumberFormatException | IOException ex){}
+    // Return default hadoop release
+    return 3;
   }
 }

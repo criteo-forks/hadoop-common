@@ -1117,9 +1117,21 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_ADMIN_USER_ENV = NM_PREFIX + "admin-env";
   public static final String DEFAULT_NM_ADMIN_USER_ENV = "MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX";
 
+  /** Environment variables that will be sent to containers.*/
+  public static final String NM_HADOOP2_CONF_DIR = NM_PREFIX + "hadoop2-conf-dir";
+  public static final String DEFAULT_NM_HADOOP2_CONF_DIR = "/etc/hadoop2/conf";
+
+  /** Environment variables that will be sent to containers.*/
+  public static final String NM_ADMIN_USER_ENV_HADOOP2 = NM_PREFIX + "admin-env-hadoop2";
+  public static final String DEFAULT_NM_ADMIN_USER_ENV_HADOOP2 = "MALLOC_ARENA_MAX=$MALLOC_ARENA_MAX";
+
   /** Environment variables that will be overriden on containers.*/
   public static final String NM_ADMIN_USER_ENV_OVERRIDE = NM_PREFIX + "admin-env-override";
   public static final String DEFAULT_NM_ADMIN_USER_ENV_OVERRIDE = "";
+
+  /** Environment variables that will be overriden on containers.*/
+  public static final String NM_ADMIN_USER_ENV_OVERRIDE_HADOOP2 = NM_PREFIX + "admin-env-override-hadoop2";
+  public static final String DEFAULT_NM_ADMIN_USER_ENV_OVERRIDE_HADOOP2 = "";
 
   /** Environment variables that containers may override rather than use NodeManager's default.*/
   public static final String NM_ENV_WHITELIST = NM_PREFIX + "env-whitelist";
