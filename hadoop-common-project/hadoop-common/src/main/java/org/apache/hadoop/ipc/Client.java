@@ -853,8 +853,10 @@ public class Client {
       }
       if (action.action == RetryAction.RetryDecision.FAIL) {
         if (action.reason != null) {
-          LOG.warn("Failed to connect to server: " + server + ": "
-              + action.reason);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Failed to connect to server: " + server + ": "
+                    + action.reason, ioe);
+          }
         }
         throw ioe;
       }
