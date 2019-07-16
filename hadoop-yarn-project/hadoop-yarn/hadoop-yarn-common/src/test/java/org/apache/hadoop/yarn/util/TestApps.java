@@ -72,4 +72,13 @@ public class TestApps {
     assertEquals("", environment.get("e"));
     assertEquals("/test", environment.get("JAVA_HOME"));
   }
+
+  @Test
+  public void testHadoopRelease() {
+    Map<String, String> environment = new HashMap<String, String>();
+    environment.put("YARN_HADOOP_RELEASE", "2");
+    assertEquals(2, Apps.getHadoopRelease(environment));
+    environment = new HashMap<String, String>();
+    assertEquals(3, Apps.getHadoopRelease(environment));
+  }
 }

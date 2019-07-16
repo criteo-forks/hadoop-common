@@ -714,7 +714,7 @@ public class ContainerLaunch implements Callable<Integer> {
     return getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
         + String.format(ContainerLaunch.PID_FILE_NAME_FMT, containerIdStr);
   }
-  
+
   /**
    * Cleanup the container.
    * Cancels the launch if launch has not started yet or signals
@@ -747,16 +747,16 @@ public class ContainerLaunch implements Callable<Integer> {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Marking container " + containerIdStr + " as inactive");
     }
-    // this should ensure that if the container process has not launched 
+    // this should ensure that if the container process has not launched
     // by this time, it will never be launched
     exec.deactivateContainer(containerId);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("Getting pid for container " + containerIdStr + " to kill"
-          + " from pid file " 
+          + " from pid file "
           + (pidFilePath != null ? pidFilePath.toString() : "null"));
     }
-    
+
     // however the container process may have already started
     try {
 
@@ -1073,7 +1073,7 @@ public class ContainerLaunch implements Callable<Integer> {
    * @throws Exception
    */
   private String getContainerPid(Path pidFilePath) throws Exception {
-    String containerIdStr = 
+    String containerIdStr =
         container.getContainerId().toString();
     String processId = null;
     if (LOG.isDebugEnabled()) {
@@ -1083,7 +1083,7 @@ public class ContainerLaunch implements Callable<Integer> {
     int sleepCounter = 0;
     final int sleepInterval = 100;
 
-    // loop waiting for pid file to show up 
+    // loop waiting for pid file to show up
     // until our timer expires in which case we admit defeat
     while (true) {
       processId = ProcessIdFileReader.getProcessId(pidFilePath);
@@ -1634,7 +1634,7 @@ public class ContainerLaunch implements Callable<Integer> {
       environment.put(variable, value);
     }
   }
-  
+
   private static void putEnvIfAbsent(
       Map<String, String> environment, String variable) {
     if (environment.get(variable) == null) {
@@ -1701,7 +1701,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
     addToEnvMap(environment, nmVars, Environment.HOME.name(),
         conf.get(
-            YarnConfiguration.NM_USER_HOME_DIR, 
+            YarnConfiguration.NM_USER_HOME_DIR,
             YarnConfiguration.DEFAULT_NM_USER_HOME_DIR
             )
         );
@@ -1712,18 +1712,40 @@ public class ContainerLaunch implements Callable<Integer> {
       addToEnvMap(environment, nmVars, "JVM_PID", "$$");
     }
 
-    // variables here will be forced in, even if the container has specified them.
+    // Load job classpath and identify on which hadoop release we are running it
+    int hadoopVersion = Apps.getHadoopRelease(environment);
+
     String nmAdminUserEnv = conf.get(
-        YarnConfiguration.NM_ADMIN_USER_ENV,
-        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV);
+      YarnConfiguration.NM_ADMIN_USER_ENV,
+      YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV);
+
+    String nmAdminUserEnvOverride = conf.get(
+        YarnConfiguration.NM_ADMIN_USER_ENV_OVERRIDE,
+        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV_OVERRIDE);
+
+    // If hadoop 2 load specific hadoop 2 env variables
+    if (hadoopVersion == 2) {
+      // Ensure we load local hadoop 2 config
+      environment.put("HADOOP_CONF_DIR", conf.get(
+        YarnConfiguration.NM_HADOOP2_CONF_DIR,
+        YarnConfiguration.DEFAULT_NM_HADOOP2_CONF_DIR));
+
+      nmAdminUserEnv = conf.get(
+        YarnConfiguration.NM_ADMIN_USER_ENV_HADOOP2,
+        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV_HADOOP2);
+
+      // variables here will be override in.
+      nmAdminUserEnvOverride = conf.get(
+        YarnConfiguration.NM_ADMIN_USER_ENV_OVERRIDE_HADOOP2,
+        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV_OVERRIDE_HADOOP2);
+    }
+
+    // variables here will be forced in, even if the container has specified them.
     Apps.setEnvFromInputString(environment, nmAdminUserEnv, File.pathSeparator);
     nmVars.addAll(Apps.getEnvVarsFromInputString(nmAdminUserEnv,
         File.pathSeparator));
 
     // variables here will be override in.
-    String nmAdminUserEnvOverride = conf.get(
-        YarnConfiguration.NM_ADMIN_USER_ENV_OVERRIDE,
-        YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV_OVERRIDE);
     Apps.overrideEnvFromInputString(environment, nmAdminUserEnvOverride);
     nmVars.addAll(Apps.getEnvVarsFromInputString(nmAdminUserEnvOverride,
         File.pathSeparator));
