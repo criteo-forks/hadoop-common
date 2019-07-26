@@ -45,6 +45,7 @@ public class ClasspathConstructor {
 
 
   /**
+   * Get the list of JARs from the YARN settings
    * @param config configuration
    */
   public List<String> yarnApplicationClasspath(Configuration config) {
