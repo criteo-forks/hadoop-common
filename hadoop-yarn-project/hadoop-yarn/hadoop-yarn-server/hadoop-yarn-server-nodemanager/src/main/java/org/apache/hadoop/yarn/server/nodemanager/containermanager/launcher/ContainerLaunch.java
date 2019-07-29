@@ -1738,6 +1738,16 @@ public class ContainerLaunch implements Callable<Integer> {
       nmAdminUserEnvOverride = conf.get(
         YarnConfiguration.NM_ADMIN_USER_ENV_OVERRIDE_HADOOP2,
         YarnConfiguration.DEFAULT_NM_ADMIN_USER_ENV_OVERRIDE_HADOOP2);
+
+      // Put hadoop 2 conf at the beginning of the classpath
+      String inputClassPath = environment.get(Environment.CLASSPATH.name());
+      if (inputClassPath != null && !inputClassPath.isEmpty()) {
+        String newClassPath = conf.get(
+            YarnConfiguration.NM_HADOOP2_CONF_DIR,
+            YarnConfiguration.DEFAULT_NM_HADOOP2_CONF_DIR) + File.pathSeparator +
+            inputClassPath;
+        environment.put(Environment.CLASSPATH.name(), newClassPath);
+      }
     }
 
     // variables here will be forced in, even if the container has specified them.
