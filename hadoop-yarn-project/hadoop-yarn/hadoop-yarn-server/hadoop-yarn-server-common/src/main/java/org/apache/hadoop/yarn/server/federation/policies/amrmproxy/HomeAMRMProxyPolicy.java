@@ -18,7 +18,8 @@
 
 package org.apache.hadoop.yarn.server.federation.policies.amrmproxy;
 
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,42 +28,47 @@ import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContext;
 import org.apache.hadoop.yarn.server.federation.policies.FederationPolicyInitializationContextValidator;
+import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyException;
 import org.apache.hadoop.yarn.server.federation.policies.exceptions.FederationPolicyInitializationException;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterId;
 import org.apache.hadoop.yarn.server.federation.store.records.SubClusterInfo;
 
 /**
  * An implementation of the {@link FederationAMRMProxyPolicy} that simply
- * broadcasts each {@link ResourceRequest} to all the available sub-clusters.
+ * sends the {@link ResourceRequest} to the home subcluster.
  */
-public class BroadcastAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
+public class HomeAMRMProxyPolicy extends AbstractAMRMProxyPolicy {
+
+  /** Identifier of the local subcluster. */
+  private SubClusterId homeSubcluster;
 
   @Override
   public void reinitialize(
       FederationPolicyInitializationContext policyContext)
       throws FederationPolicyInitializationException {
-    // overrides initialize to avoid weight checks that do no apply for
-    // this policy.
+
     FederationPolicyInitializationContextValidator
         .validate(policyContext, this.getClass().getCanonicalName());
     setPolicyContext(policyContext);
+
+    this.homeSubcluster = policyContext.getHomeSubcluster();
   }
 
   @Override
   public Map<SubClusterId, List<ResourceRequest>> splitResourceRequests(
       List<ResourceRequest> resourceRequests) throws YarnException {
-
-    Map<SubClusterId, SubClusterInfo> activeSubclusters =
-        getActiveSubclusters();
-
-    Map<SubClusterId, List<ResourceRequest>> answer = new HashMap<>();
-
-    // simply broadcast the resource request to all sub-clusters
-    for (SubClusterId subClusterId : activeSubclusters.keySet()) {
-      answer.put(subClusterId, resourceRequests);
+    if (homeSubcluster == null) {
+      throw new FederationPolicyException("No home subcluster available");
     }
 
-    return answer;
-  }
+    Map<SubClusterId, SubClusterInfo> active = getActiveSubclusters();
+    if (!active.containsKey(homeSubcluster)) {
+      throw new FederationPolicyException(
+          "The local subcluster " + homeSubcluster + " is not active");
+    }
 
+    List<ResourceRequest> resourceRequestsCopy =
+        new ArrayList<>(resourceRequests);
+    return Collections.singletonMap(homeSubcluster, resourceRequestsCopy);
+  }
 }
