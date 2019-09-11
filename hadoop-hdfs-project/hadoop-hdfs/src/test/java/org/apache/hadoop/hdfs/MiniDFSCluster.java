@@ -785,7 +785,9 @@ public class MiniDFSCluster {
       int replication = conf.getInt(DFS_REPLICATION_KEY, 3);
       int minRplication = Math.min(replication, numDataNodes);
       conf.setInt(DFS_REPLICATION_KEY, minRplication);
-      conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY, minRplication);
+      int replicationNNMin = conf.getInt(DFSConfigKeys.DFS_NAMENODE_REPLICATION_MIN_KEY, minRplication);
+      int minReplicationNNMin = Math.min(replicationNNMin, minRplication);
+      conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_REPLICATION_MIN_KEY, minReplicationNNMin);
       int maintenanceMinReplication = conf.getInt(
           DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY,
           DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_DEFAULT);
