@@ -53,7 +53,7 @@ import com.google.common.collect.Lists;
 /**
  * Manages storage for the set of BlockPoolSlices which share a particular 
  * block pool id, on this DataNode.
- * 
+ *
  * This class supports the following functionality:
  * <ol>
  * <li> Formatting a new block pool storage</li>
@@ -62,7 +62,7 @@ import com.google.common.collect.Lists;
  * <li> Rolling back a block pool to a previous snapshot</li>
  * <li> Finalizing block storage by deletion of a snapshot</li>
  * </ul>
- * 
+ *
  * @see Storage
  */
 @InterfaceAudience.Private
@@ -256,7 +256,7 @@ public class BlockPoolSliceStorage extends Storage {
   }
 
   /**
-   * Format a block pool slice storage. 
+   * Format a block pool slice storage.
    * @param dnCurDir DataStorage current directory
    * @param nsInfo the name space info
    * @throws IOException Signals that an I/O exception has occurred.
@@ -268,7 +268,7 @@ public class BlockPoolSliceStorage extends Storage {
   }
 
   /**
-   * Format a block pool slice storage. 
+   * Format a block pool slice storage.
    * @param bpSdir the block pool storage
    * @param nsInfo the name space info
    * @throws IOException Signals that an I/O exception has occurred.
@@ -322,21 +322,21 @@ public class BlockPoolSliceStorage extends Storage {
       throw new InconsistentFSStateException(storage, "file "
           + STORAGE_FILE_VERSION + " is invalid.");
     }
-    
+
     if (!blockpoolID.equals("") && !blockpoolID.equals(bpid)) {
       throw new InconsistentFSStateException(storage,
           "Unexpected blockpoolID " + bpid + ". Expected " + blockpoolID);
     }
     blockpoolID = bpid;
   }
-  
+
   @Override
   protected void setFieldsFromProperties(Properties props, StorageDirectory sd)
       throws IOException {
     setLayoutVersion(props, sd);
     setNamespaceID(props, sd);
     setcTime(props, sd);
-    
+
     String sbpid = props.getProperty("blockpoolID");
     setBlockPoolID(sd.getRoot(), sbpid);
   }
@@ -348,7 +348,7 @@ public class BlockPoolSliceStorage extends Storage {
    * Rollback if previousLV >= LAYOUT_VERSION && prevCTime <= namenode.cTime.
    * Upgrade if this.LV > LAYOUT_VERSION || this.cTime < namenode.cTime Regular
    * startup if this.LV = LAYOUT_VERSION && this.cTime = namenode.cTime
-   * 
+   *
    * @param sd storage directory <SD>/current/<bpid>
    * @param nsInfo namespace info
    * @param startOpt startup option
@@ -361,7 +361,7 @@ public class BlockPoolSliceStorage extends Storage {
       Preconditions.checkState(!getTrashRootDir(sd).exists(),
           sd.getPreviousDir() + " and " + getTrashRootDir(sd) + " should not " +
           " both be present.");
-      doRollback(sd, nsInfo); // rollback if applicable
+      doRollback(sd, nsInfo, conf); // rollback if applicable
     } else if (startOpt == StartupOption.ROLLBACK &&
         !sd.getPreviousDir().exists()) {
       // Restore all the files in the trash. The restored files are retained
@@ -372,7 +372,7 @@ public class BlockPoolSliceStorage extends Storage {
     }
     readProperties(sd);
     checkVersionUpgradable(this.layoutVersion);
-    assert this.layoutVersion >= HdfsConstants.DATANODE_LAYOUT_VERSION 
+    assert this.layoutVersion >= HdfsConstants.DATANODE_LAYOUT_VERSION
        : "Future version is not allowed";
     if (getNamespaceID() != nsInfo.getNamespaceID()) {
       throw new IOException("Incompatible namespaceIDs in "
@@ -422,7 +422,7 @@ public class BlockPoolSliceStorage extends Storage {
    * <li>Save new version file in current directory</li>
    * </ol>
    * <li>Rename previous.tmp to previous</li> </ol>
-   * 
+   *
    * @param bpSd storage directory <SD>/current/<bpid>
    * @param nsInfo Namespace Info from the namenode
    * @throws IOException on error
@@ -446,7 +446,7 @@ public class BlockPoolSliceStorage extends Storage {
     String dnRoot = getDataNodeStorageRoot(bpSd.getRoot().getCanonicalPath());
     StorageDirectory dnSdStorage = new StorageDirectory(new File(dnRoot));
     File dnPrevDir = dnSdStorage.getPreviousDir();
-    
+
     // If <SD>/previous directory exists delete it
     if (dnPrevDir.exists()) {
       deleteDir(dnPrevDir);
@@ -455,18 +455,18 @@ public class BlockPoolSliceStorage extends Storage {
     final File bpPrevDir = bpSd.getPreviousDir();
     assert bpCurDir.exists() : "BP level current directory must exist.";
     cleanupDetachDir(new File(bpCurDir, DataStorage.STORAGE_DIR_DETACHED));
-    
+
     // 1. Delete <SD>/current/<bpid>/previous dir before upgrading
     if (bpPrevDir.exists()) {
       deleteDir(bpPrevDir);
     }
     final File bpTmpDir = bpSd.getPreviousTmp();
     assert !bpTmpDir.exists() : "previous.tmp directory must not exist.";
-    
+
     // 2. Rename <SD>/current/<bpid>/current to
     //    <SD>/current/<bpid>/previous.tmp
     rename(bpCurDir, bpTmpDir);
-    
+
     final String name = "block pool " + blockpoolID + " at " + bpSd.getRoot();
     if (callables == null) {
       doUpgrade(name, bpSd, nsInfo, bpPrevDir, bpTmpDir, bpCurDir, oldLV, conf);
@@ -489,11 +489,11 @@ public class BlockPoolSliceStorage extends Storage {
     // 3. Create new <SD>/current with block files hardlinks and VERSION
     linkAllBlocks(bpTmpDir, bpCurDir, oldLV, conf);
     this.layoutVersion = HdfsConstants.DATANODE_LAYOUT_VERSION;
-    assert this.namespaceID == nsInfo.getNamespaceID() 
+    assert this.namespaceID == nsInfo.getNamespaceID()
         : "Data-node and name-node layout versions must be the same.";
     this.cTime = nsInfo.getCTime();
     writeProperties(bpSd);
-    
+
     // 4.rename <SD>/current/<bpid>/previous.tmp to
     // <SD>/current/<bpid>/previous
     rename(bpTmpDir, bpPrevDir);
@@ -502,10 +502,10 @@ public class BlockPoolSliceStorage extends Storage {
 
   /**
    * Cleanup the detachDir.
-   * 
+   *
    * If the directory is not empty report an error; Otherwise remove the
    * directory.
-   * 
+   *
    * @param detachDir detach directory
    * @throws IOException if the directory is not empty or it can not be removed
    */
@@ -572,17 +572,17 @@ public class BlockPoolSliceStorage extends Storage {
 
   /*
    * Roll back to old snapshot at the block pool level
-   * If previous directory exists: 
+   * If previous directory exists:
    * <ol>
    * <li>Rename <SD>/current/<bpid>/current to removed.tmp</li>
    * <li>Rename * <SD>/current/<bpid>/previous to current</li>
    * <li>Remove removed.tmp</li>
    * </ol>
-   * 
+   *
    * Do nothing if previous directory does not exist.
    * @param bpSd Block pool storage directory at <SD>/current/<bpid>
    */
-  void doRollback(StorageDirectory bpSd, NamespaceInfo nsInfo)
+  void doRollback(StorageDirectory bpSd, NamespaceInfo nsInfo, Configuration conf)
       throws IOException {
     File prevDir = bpSd.getPreviousDir();
     // regular startup if previous dir does not exist
@@ -591,12 +591,13 @@ public class BlockPoolSliceStorage extends Storage {
     // read attributes out of the VERSION file of previous directory
     BlockPoolSliceStorage prevInfo = new BlockPoolSliceStorage();
     prevInfo.readPreviousVersionProperties(bpSd);
+    final int currentLayoutVersion = Integer.parseInt(readPropertiesFile(bpSd.getVersionFile()).getProperty("layoutVersion"));
 
     // We allow rollback to a state, which is either consistent with
     // the namespace state or can be further upgraded to it.
     // In another word, we can only roll back when ( storedLV >= software LV)
     // && ( DN.previousCTime <= NN.ctime)
-    if (!(prevInfo.getLayoutVersion() >= HdfsConstants.DATANODE_LAYOUT_VERSION && 
+    if (!(prevInfo.getLayoutVersion() >= HdfsConstants.DATANODE_LAYOUT_VERSION &&
         prevInfo.getCTime() <= nsInfo.getCTime())) { // cannot rollback
       throw new InconsistentFSStateException(bpSd.getRoot(),
           "Cannot rollback to a newer state.\nDatanode previous state: LV = "
@@ -604,7 +605,7 @@ public class BlockPoolSliceStorage extends Storage {
               + " is newer than the namespace state: LV = "
               + HdfsConstants.DATANODE_LAYOUT_VERSION + " CTime = " + nsInfo.getCTime());
     }
-    
+
     LOG.info("Rolling back storage directory " + bpSd.getRoot()
         + ".\n   target LV = " + nsInfo.getLayoutVersion()
         + "; target CTime = " + nsInfo.getCTime());
@@ -614,10 +615,15 @@ public class BlockPoolSliceStorage extends Storage {
     File curDir = bpSd.getCurrentDir();
     assert curDir.exists() : "Current directory must exist.";
     rename(curDir, tmpDir);
-    
+
     // 2. rename previous to current
     rename(prevDir, curDir);
-    
+
+    // Link block files from <SD>/removed.tmp to <SD>/current if layout -57
+    if (currentLayoutVersion == -57) {
+      linkAllBlocks(tmpDir, curDir, currentLayoutVersion, conf);
+    }
+
     // 3. delete removed.tmp dir
     deleteDir(tmpDir);
     LOG.info("Rollback of " + bpSd.getRoot() + " is complete");
@@ -640,7 +646,7 @@ public class BlockPoolSliceStorage extends Storage {
         + ".\n   cur LV = " + this.getLayoutVersion() + "; cur CTime = "
         + this.getCTime());
     assert bpSd.getCurrentDir().exists() : "Current directory must exist.";
-    
+
     // rename previous to finalized.tmp
     final File tmpDir = bpSd.getFinalizedTmp();
     rename(prevDir, tmpDir);
@@ -666,7 +672,7 @@ public class BlockPoolSliceStorage extends Storage {
 
   /**
    * Hardlink all finalized and RBW blocks in fromDir to toDir
-   * 
+   *
    * @param fromDir directory where the snapshot is stored
    * @param toDir the current data directory
    * @throws IOException if error occurs during hardlink
@@ -700,7 +706,7 @@ public class BlockPoolSliceStorage extends Storage {
   public String toString() {
     return super.toString() + ";bpid=" + blockpoolID;
   }
-  
+
   /**
    * Get a block pool storage root based on data node storage root
    * @param bpID block pool ID

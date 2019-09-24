@@ -1123,8 +1123,8 @@ public class DataStorage extends Storage {
     // If we are upgrading from a version older than the one where we introduced
     // block ID-based layout AND we're working with the finalized directory,
     // we'll need to upgrade from the old flat layout to the block ID-based one
-    if (oldLV > DataNodeLayoutVersion.Feature.BLOCKID_BASED_LAYOUT.getInfo().
-        getLayoutVersion() && to.getName().equals(STORAGE_DIR_FINALIZED)) {
+    if ((oldLV > DataNodeLayoutVersion.Feature.BLOCKID_BASED_LAYOUT.getInfo().
+        getLayoutVersion() || oldLV == -57) && to.getName().equals(STORAGE_DIR_FINALIZED)) {
       upgradeToIdBasedLayout = true;
     }
 
@@ -1330,7 +1330,9 @@ public class DataStorage extends Storage {
       return;
     }
     if (!from.isDirectory()) {
-      HardLink.createHardLink(from, to);
+      if (oldLV != -57 || !to.exists()) {
+        HardLink.createHardLink(from, to);
+      }
       hl.linkStats.countSingleLinks++;
       return;
     }
@@ -1349,7 +1351,7 @@ public class DataStorage extends Storage {
     // directory structure
     if (!upgradeToIdBasedLayout || !to.getName().startsWith(
         BLOCK_SUBDIR_PREFIX)) {
-      if (!to.mkdirs())
+      if (!to.mkdirs() && oldLV != -57)
         throw new IOException("Cannot create directory " + to);
     }
 
@@ -1365,8 +1367,11 @@ public class DataStorage extends Storage {
               throw new IOException("Failed to mkdirs " + blockLocation);
             }
           }
-          idBasedLayoutSingleLinks.add(new LinkArgs(new File(from, blockName),
-              new File(blockLocation, blockName)));
+          File dest = new File(blockLocation, blockName);
+          if (oldLV != -57 || !dest.exists()) {
+            idBasedLayoutSingleLinks.add(new LinkArgs(new File(from, blockName),
+                new File(blockLocation, blockName)));
+          }
           hl.linkStats.countSingleLinks++;
         }
       } else {
