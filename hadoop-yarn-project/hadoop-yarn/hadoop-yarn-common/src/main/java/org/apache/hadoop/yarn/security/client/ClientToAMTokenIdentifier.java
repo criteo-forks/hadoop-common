@@ -18,84 +18,191 @@
 
 package org.apache.hadoop.yarn.security.client;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationAttemptIdPBImpl;
+import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos;
+
+import java.io.*;
 
 @Public
 @Evolving
 public class ClientToAMTokenIdentifier extends TokenIdentifier {
 
-  public static final Text KIND_NAME = new Text("YARN_CLIENT_TOKEN");
+    public static final Text KIND_NAME = new Text("YARN_CLIENT_TOKEN");
 
-  private ApplicationAttemptId applicationAttemptId;
-  private Text clientName = new Text();
+    private ClientToAMTokenIdentifier clientToAMTokenIdentifier;
 
-  // TODO: Add more information in the tokenID such that it is not
-  // transferrable, more secure etc.
+    // TODO: Add more information in the tokenID such that it is not
+    // transferrable, more secure etc.
 
-  public ClientToAMTokenIdentifier() {
-  }
-
-  public ClientToAMTokenIdentifier(ApplicationAttemptId id, String client) {
-    this();
-    this.applicationAttemptId = id;
-    this.clientName = new Text(client);
-  }
-
-  public ApplicationAttemptId getApplicationAttemptID() {
-    return this.applicationAttemptId;
-  }
-
-  public String getClientName() {
-    return this.clientName.toString();
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeLong(this.applicationAttemptId.getApplicationId()
-      .getClusterTimestamp());
-    out.writeInt(this.applicationAttemptId.getApplicationId().getId());
-    out.writeInt(this.applicationAttemptId.getAttemptId());
-    this.clientName.write(out);
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    this.applicationAttemptId =
-        ApplicationAttemptId.newInstance(
-          ApplicationId.newInstance(in.readLong(), in.readInt()), in.readInt());
-    this.clientName.readFields(in);
-  }
-
-  @Override
-  public Text getKind() {
-    return KIND_NAME;
-  }
-
-  @Override
-  public UserGroupInformation getUser() {
-    if (this.clientName == null) {
-      return null;
+    public ClientToAMTokenIdentifier() {
     }
-    return UserGroupInformation.createRemoteUser(this.clientName.toString());
-  }
 
-  @InterfaceAudience.Private
-  public static class Renewer extends Token.TrivialRenewer {
+    public ClientToAMTokenIdentifier(ApplicationAttemptId id, String client) {
+        this();
+        clientToAMTokenIdentifier = new ByteArray(id, client);
+    }
+
+    public ApplicationAttemptId getApplicationAttemptID() {
+        return this.clientToAMTokenIdentifier.getApplicationAttemptID();
+    }
+
+    public String getClientName() {
+        return this.clientToAMTokenIdentifier.getClientName();
+    }
+
     @Override
-    protected Text getKind() {
-      return KIND_NAME;
+    public void write(DataOutput out) throws IOException {
+        clientToAMTokenIdentifier.write(out);
     }
-  }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+        byte[] data = IOUtils.readFullyToByteArray(in);
+        try {
+            clientToAMTokenIdentifier = new Proto();
+            clientToAMTokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(data)));
+        } catch (InvalidProtocolBufferException e) {
+            clientToAMTokenIdentifier = new ByteArray();
+            clientToAMTokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(data)));
+        }
+    }
+
+    @Override
+    public Text getKind() {
+        return KIND_NAME;
+    }
+
+    @Override
+    public UserGroupInformation getUser() {
+        return clientToAMTokenIdentifier.getUser();
+    }
+
+    @InterfaceAudience.Private
+    public static class Renewer extends Token.TrivialRenewer {
+        @Override
+        protected Text getKind() {
+            return KIND_NAME;
+        }
+    }
+
+    public class Proto extends ClientToAMTokenIdentifier {
+        YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto proto;
+
+        public Proto() {
+        }
+
+        public Proto(ApplicationAttemptId id, String client) {
+            YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto.Builder builder =
+                YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto.newBuilder();
+            if (id != null) {
+                builder.setAppAttemptId(((ApplicationAttemptIdPBImpl) id).getProto());
+            }
+            if (client != null) {
+                builder.setClientName(client);
+            }
+            proto = builder.build();
+        }
+
+        public ApplicationAttemptId getApplicationAttemptID() {
+            if (!proto.hasAppAttemptId()) {
+                return null;
+            }
+            return new ApplicationAttemptIdPBImpl(proto.getAppAttemptId());
+        }
+
+        public String getClientName() {
+            return proto.getClientName();
+        }
+
+        public YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto getProto() {
+            return proto;
+        }
+
+        @Override
+        public Text getKind() {
+            return KIND_NAME;
+        }
+
+        @Override
+        public UserGroupInformation getUser() {
+            String clientName = getClientName();
+            if (clientName == null) {
+                return null;
+            }
+            return UserGroupInformation.createRemoteUser(clientName);
+        }
+
+        @Override
+        public void write(DataOutput out) throws IOException {
+            out.write(proto.toByteArray());
+        }
+
+        @Override
+        public void readFields(DataInput in) throws IOException {
+            proto = YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto.parseFrom((DataInputStream)in);
+        }
+    }
+
+    public class ByteArray extends ClientToAMTokenIdentifier {
+        private ApplicationAttemptId applicationAttemptId;
+        private Text clientName = new Text();
+
+        public ByteArray() {
+        }
+
+        public ByteArray(ApplicationAttemptId id, String client) {
+            this.applicationAttemptId = id;
+            this.clientName = new Text(client);
+        }
+
+        @Override
+        public void write(DataOutput out) throws IOException {
+            out.writeLong(this.applicationAttemptId.getApplicationId()
+                .getClusterTimestamp());
+            out.writeInt(this.applicationAttemptId.getApplicationId().getId());
+            out.writeInt(this.applicationAttemptId.getAttemptId());
+            this.clientName.write(out);
+        }
+
+        @Override
+        public void readFields(DataInput in) throws IOException {
+            this.applicationAttemptId =
+                ApplicationAttemptId.newInstance(
+                    ApplicationId.newInstance(in.readLong(), in.readInt()), in.readInt());
+            this.clientName.readFields(in);
+        }
+
+        public ApplicationAttemptId getApplicationAttemptID() {
+            return this.applicationAttemptId;
+        }
+
+        public String getClientName() {
+            return this.clientName.toString();
+        }
+
+        @Override
+        public Text getKind() {
+            return KIND_NAME;
+        }
+
+        @Override
+        public UserGroupInformation getUser() {
+            if (this.clientName == null) {
+                return null;
+            }
+            return UserGroupInformation.createRemoteUser(this.clientName.toString());
+        }
+
+    }
 }
