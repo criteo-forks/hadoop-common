@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -40,7 +40,7 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
 
     public static final Text KIND_NAME = new Text("YARN_CLIENT_TOKEN");
 
-    private ClientToAMTokenIdentifier clientToAMTokenIdentifier;
+    private InternalTokenIdentifier internalTokenIdentifier;
 
     // TODO: Add more information in the tokenID such that it is not
     // transferrable, more secure etc.
@@ -50,31 +50,25 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
 
     public ClientToAMTokenIdentifier(ApplicationAttemptId id, String client) {
         this();
-        clientToAMTokenIdentifier = new ByteArray(id, client);
+        internalTokenIdentifier = new PojoImpl(id, client);
     }
 
     public ApplicationAttemptId getApplicationAttemptID() {
-        return this.clientToAMTokenIdentifier.getApplicationAttemptID();
-    }
-
-    public String getClientName() {
-        return this.clientToAMTokenIdentifier.getClientName();
+        return this.internalTokenIdentifier.getApplicationAttemptID();
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
-        clientToAMTokenIdentifier.write(out);
+        internalTokenIdentifier.write(out);
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
         byte[] data = IOUtils.readFullyToByteArray(in);
         try {
-            clientToAMTokenIdentifier = new Proto();
-            clientToAMTokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(data)));
+            internalTokenIdentifier = new ProtoImpl(data);
         } catch (InvalidProtocolBufferException e) {
-            clientToAMTokenIdentifier = new ByteArray();
-            clientToAMTokenIdentifier.readFields(new DataInputStream(new ByteArrayInputStream(data)));
+            internalTokenIdentifier = new PojoImpl(data);
         }
     }
 
@@ -85,7 +79,11 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
 
     @Override
     public UserGroupInformation getUser() {
-        return clientToAMTokenIdentifier.getUser();
+        String clientName = this.internalTokenIdentifier.getClientName();
+        if (clientName == null) {
+            return null;
+        }
+        return UserGroupInformation.createRemoteUser(clientName);
     }
 
     @InterfaceAudience.Private
@@ -96,22 +94,19 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
         }
     }
 
-    public class Proto extends ClientToAMTokenIdentifier {
+    interface InternalTokenIdentifier {
+        ApplicationAttemptId getApplicationAttemptID();
+
+        String getClientName();
+
+        void write(DataOutput out) throws IOException;
+    }
+
+    public class ProtoImpl implements InternalTokenIdentifier {
         YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto proto;
 
-        public Proto() {
-        }
-
-        public Proto(ApplicationAttemptId id, String client) {
-            YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto.Builder builder =
-                YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto.newBuilder();
-            if (id != null) {
-                builder.setAppAttemptId(((ApplicationAttemptIdPBImpl) id).getProto());
-            }
-            if (client != null) {
-                builder.setClientName(client);
-            }
-            proto = builder.build();
+        ProtoImpl(byte[] bytes) throws IOException {
+            proto = YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto.parseFrom(bytes);
         }
 
         public ApplicationAttemptId getApplicationAttemptID() {
@@ -129,58 +124,26 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
             return proto;
         }
 
-        @Override
-        public Text getKind() {
-            return KIND_NAME;
-        }
-
-        @Override
-        public UserGroupInformation getUser() {
-            String clientName = getClientName();
-            if (clientName == null) {
-                return null;
-            }
-            return UserGroupInformation.createRemoteUser(clientName);
-        }
-
-        @Override
         public void write(DataOutput out) throws IOException {
             out.write(proto.toByteArray());
         }
-
-        @Override
-        public void readFields(DataInput in) throws IOException {
-            proto = YarnSecurityTokenProtos.ClientToAMTokenIdentifierProto.parseFrom((DataInputStream)in);
-        }
     }
 
-    public class ByteArray extends ClientToAMTokenIdentifier {
+    public class PojoImpl implements InternalTokenIdentifier {
         private ApplicationAttemptId applicationAttemptId;
         private Text clientName = new Text();
 
-        public ByteArray() {
-        }
-
-        public ByteArray(ApplicationAttemptId id, String client) {
-            this.applicationAttemptId = id;
-            this.clientName = new Text(client);
-        }
-
-        @Override
-        public void write(DataOutput out) throws IOException {
-            out.writeLong(this.applicationAttemptId.getApplicationId()
-                .getClusterTimestamp());
-            out.writeInt(this.applicationAttemptId.getApplicationId().getId());
-            out.writeInt(this.applicationAttemptId.getAttemptId());
-            this.clientName.write(out);
-        }
-
-        @Override
-        public void readFields(DataInput in) throws IOException {
+        PojoImpl(byte[] bytes) throws IOException {
+            DataInputStream in = new DataInputStream(new ByteArrayInputStream(bytes));
             this.applicationAttemptId =
                 ApplicationAttemptId.newInstance(
                     ApplicationId.newInstance(in.readLong(), in.readInt()), in.readInt());
             this.clientName.readFields(in);
+        }
+
+        PojoImpl(ApplicationAttemptId id, String client) {
+            this.applicationAttemptId = id;
+            this.clientName = new Text(client);
         }
 
         public ApplicationAttemptId getApplicationAttemptID() {
@@ -191,18 +154,12 @@ public class ClientToAMTokenIdentifier extends TokenIdentifier {
             return this.clientName.toString();
         }
 
-        @Override
-        public Text getKind() {
-            return KIND_NAME;
+        public void write(DataOutput out) throws IOException {
+            out.writeLong(this.applicationAttemptId.getApplicationId()
+                .getClusterTimestamp());
+            out.writeInt(this.applicationAttemptId.getApplicationId().getId());
+            out.writeInt(this.applicationAttemptId.getAttemptId());
+            this.clientName.write(out);
         }
-
-        @Override
-        public UserGroupInformation getUser() {
-            if (this.clientName == null) {
-                return null;
-            }
-            return UserGroupInformation.createRemoteUser(this.clientName.toString());
-        }
-
     }
 }
