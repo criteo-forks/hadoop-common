@@ -102,6 +102,11 @@ public class DefaultLinuxContainerRuntime implements LinuxContainerRuntime {
             ctx.getExecutionAttribute(LOG_DIRS)),
         ctx.getExecutionAttribute(RESOURCES_OPTIONS));
 
+    String netnsName = ctx.getExecutionAttribute(NETNS_NAME);
+    if(netnsName != null) {
+      launchOp.appendArgs(netnsName);
+    }
+
     String tcCommandFile = ctx.getExecutionAttribute(TC_COMMAND_FILE);
 
     if (tcCommandFile != null) {

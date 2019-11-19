@@ -215,6 +215,7 @@ static void display_feature_disabled_message(const char* name) {
 /* Use to store parsed input parmeters for various operations */
 static struct {
   char *cgroups_hierarchy;
+  char *netns_name;
   char *traffic_control_command_file;
   const char *run_as_user_name;
   const char *yarn_user_name;
@@ -467,8 +468,8 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
 
   case LAUNCH_CONTAINER:
     //kill me now.
-    if (!(argc == 13 || argc == 14)) {
-      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 13 or 14)"
+    if (!(argc == 13 || argc == 14 || argc == 15)) {
+      fprintf(ERRORFILE, "Wrong number of arguments (%d vs 13 or 14 or 15)"
         " for launch container\n", argc);
       fflush(ERRORFILE);
       return INVALID_ARGUMENT_NUMBER;
@@ -496,8 +497,13 @@ static int validate_run_as_user_commands(int argc, char **argv, int *operation) 
         return INVALID_ARGUMENT_NUMBER;
     }
 
+    //network namespacing
+    if(argc >= 14) {
+        cmd_input.netns_name = argv[optind++];
+    }
+
     //network isolation through tc
-    if (argc == 14) {
+    if (argc == 15) {
       if(is_tc_support_enabled()) {
         cmd_input.traffic_control_command_file = argv[optind++];
       } else {
@@ -648,6 +654,13 @@ int main(int argc, char **argv) {
         break;
       }
     }
+
+    if (cmd_input.netns_name != NULL) {
+            exit_code = set_ns(cmd_input.netns_name);
+            if (exit_code != 0) {
+              break;
+            }
+        }
 
     exit_code = set_user(cmd_input.run_as_user_name);
     if (exit_code != 0) {

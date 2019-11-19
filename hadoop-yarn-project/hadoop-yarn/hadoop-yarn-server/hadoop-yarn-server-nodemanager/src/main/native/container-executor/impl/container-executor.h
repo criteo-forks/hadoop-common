@@ -175,6 +175,9 @@ struct passwd* check_user(const char *user);
 // set the user
 int set_user(const char *user);
 
+// set the net namespace
+int set_ns(const char *netns_name);
+
 // methods to get the directories
 
 char *get_user_directory(const char *nm_root, const char *user);

@@ -78,6 +78,8 @@ public final class LinuxContainerRuntimeConstants {
       List.class, "container_log_dirs");
   public static final Attribute<String> RESOURCES_OPTIONS = Attribute.attribute(
       String.class, "resources_options");
+  public static final Attribute<String> NETNS_NAME = Attribute.attribute(
+          String.class, "netns_name");
   public static final Attribute<String> TC_COMMAND_FILE = Attribute.attribute(
       String.class, "tc_command_file");
   public static final Attribute<List> CONTAINER_RUN_CMDS = Attribute.attribute(

@@ -673,6 +673,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       .setExecutionAttribute(CONTAINER_LOG_DIRS, ctx.getContainerLogDirs())
       .setExecutionAttribute(RESOURCES_OPTIONS, resourcesOptions);
 
+    if(ctx.getContainer().getLaunchContext().getEnvironment().containsKey("NETNS_NAME")) {
+      String netnsName = ctx.getContainer().getLaunchContext().getEnvironment().get("NETNS_NAME");
+      ctx.getContainer().getLaunchContext().getEnvironment().remove("NETNS_NAME");
+      builder.setExecutionAttribute(NETNS_NAME, netnsName);
+    }
+
     if (tcCommandFile != null) {
       builder.setExecutionAttribute(TC_COMMAND_FILE, tcCommandFile);
     }

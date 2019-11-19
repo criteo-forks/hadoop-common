@@ -46,6 +46,7 @@
 #include <sys/mount.h>
 #include <sys/wait.h>
 #include <getopt.h>
+#include <sched.h>
 
 #ifndef HAVE_FCHMODAT
 #include "compat/fchmodat.h"
@@ -904,6 +905,27 @@ struct passwd* check_user(const char *user) {
     free_values(banned_users);
   }
   return user_info;
+}
+
+/**
+ * Set the net namespace
+ */
+int set_ns(const char *netns_name) {
+
+    char fd_path[256] = "/var/run/netns/";
+    strcat(fd_path, netns_name);
+    int fd = open(fd_path, O_RDONLY);
+    if (fd == -1) {
+        fprintf(LOGFILE, "Tried to set an unknown namespace %s\n",
+        netns_name);
+        return -1;
+    }
+    if(setns(fd, CLONE_NEWNET) != 0) {
+        fprintf(LOGFILE, "Error setting netns %s for container: %s\n",
+        netns_name, strerror(errno));
+        return -1;
+    };
+
 }
 
 /**
