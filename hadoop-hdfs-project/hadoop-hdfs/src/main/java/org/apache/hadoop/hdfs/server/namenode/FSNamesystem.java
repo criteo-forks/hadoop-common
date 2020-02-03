@@ -3410,7 +3410,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
 
       // commit the last block and complete it if it has minimum replicas
       commitOrCompleteLastBlock(pendingFile,
-                                ExtendedBlock.getLocalBlock(previous));
+                                ExtendedBlock.getLocalBlock(previous), false);
 
       // allocate new block, record block locations in INode.
       newBlock = createNewBlock();
@@ -3802,7 +3802,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     }
 
     // commit the last block and complete it if it has minimum replicas
-    commitOrCompleteLastBlock(pendingFile, last);
+    commitOrCompleteLastBlock(pendingFile, last, false);
 
     if (!checkFileProgress(pendingFile, true)) {
       return false;
@@ -4790,10 +4790,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   }
 
   private void commitOrCompleteLastBlock(final INodeFile fileINode,
-      final Block commitBlock) throws IOException {
+      final Block commitBlock, boolean isUnderRecovery) throws IOException {
     assert hasWriteLock();
     Preconditions.checkArgument(fileINode.isUnderConstruction());
-    if (!blockManager.commitOrCompleteLastBlock(fileINode, commitBlock)) {
+    if (!blockManager.commitOrCompleteLastBlock(fileINode, commitBlock, isUnderRecovery)) {
       return;
     }
 
@@ -4899,6 +4899,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
           "Cannot commitBlockSynchronization while in safe mode");
       final BlockInfo storedBlock = getStoredBlock(
           ExtendedBlock.getLocalBlock(lastblock));
+
+      boolean isUnderRecovery = storedBlock.getBlockUCState() == BlockUCState.UNDER_RECOVERY;
+
       if (storedBlock == null) {
         if (deleteblock) {
           // This may be a retry attempt so ignore the failure
@@ -5009,7 +5012,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       if (closeFile) {
-        src = closeFileCommitBlocks(iFile, storedBlock);
+        src = closeFileCommitBlocks(iFile, storedBlock, isUnderRecovery);
       } else {
         // If this commit does not want to close the file, persist blocks
         src = iFile.getFullPathName();
@@ -5037,12 +5040,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
    * @throws IOException on error
    */
   @VisibleForTesting
-  String closeFileCommitBlocks(INodeFile pendingFile, BlockInfo storedBlock)
+  String closeFileCommitBlocks(INodeFile pendingFile, BlockInfo storedBlock, boolean isUnderRecovery)
       throws IOException {
     String src = pendingFile.getFullPathName();
 
     // commit the last block and complete it if it has minimum replicas
-    commitOrCompleteLastBlock(pendingFile, storedBlock);
+    commitOrCompleteLastBlock(pendingFile, storedBlock, isUnderRecovery);
 
     //remove lease, close file
     finalizeINodeFileUnderConstruction(src, pendingFile,

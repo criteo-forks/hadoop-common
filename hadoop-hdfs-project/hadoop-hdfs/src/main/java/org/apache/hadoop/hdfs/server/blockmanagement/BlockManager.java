@@ -766,7 +766,7 @@ public class BlockManager implements BlockStatsMXBean {
    * of replicas reported from data-nodes.
    */
   public boolean commitOrCompleteLastBlock(BlockCollection bc,
-      Block commitBlock) throws IOException {
+      Block commitBlock, boolean isUnderRecovery) throws IOException {
     if(commitBlock == null)
       return false; // not committing, this is a block allocation retry
     BlockInfo lastBlock = bc.getLastBlock();
@@ -774,7 +774,7 @@ public class BlockManager implements BlockStatsMXBean {
       return false; // no blocks in file yet
     if(lastBlock.isComplete())
       return false; // already completed (e.g. by syncBlock)
-    
+
     final boolean b = commitBlock((BlockInfoUnderConstruction)lastBlock, commitBlock);
 
     // Count replicas on decommissioning nodes, as these will not be
@@ -786,6 +786,11 @@ public class BlockManager implements BlockStatsMXBean {
 
     if (numUsableReplicas >= minReplication) {
       completeBlock(bc, bc.numBlocks() - 1, false);
+    } else if (isUnderRecovery) {
+      LOG.info("block " + commitBlock + "is under recovery, force complete " +
+              "even if liveReplicas < minReplication and update needed replications");
+      completeBlock(bc, bc.numBlocks() - 1, true);
+      updateNeededReplications(lastBlock, 1, 0);
     }
     return b;
   }
