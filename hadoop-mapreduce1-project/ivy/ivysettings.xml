@@ -89,7 +89,6 @@
       <resolver ref="maven2"/>
       <resolver ref="criteo.cloudera"/>
       <resolver ref="criteo.cloudera_repos"/>
-      <resolver ref="cloudera-snapshot"/> 
     </chain>
     <chain name="internal">
       <resolver ref="reactor-repo"/>
