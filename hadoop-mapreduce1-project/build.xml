@@ -212,7 +212,7 @@
   <!-- IVY properteis set here -->
   <property name="ivy.dir" location="ivy" />
   <loadproperties srcfile="${ivy.dir}/libraries.properties"/>
-  <property name="mvnrepo" value="http://repo2.maven.org/maven2"/>
+  <property name="mvnrepo" value="http://search.maven.org/maven2"/>
   <property name="asfrepo" value="https://repository.apache.org"/> 
   <property name="ivy.jar" location="${ivy.dir}/ivy-${ivy.version}.jar"/>
   <property name="ivy_repo_url" 
