@@ -45,15 +45,6 @@
   <property name="criteo.cloudera_repos"
             value="http://nexus.criteo.prod/content/repositories/cloudera_repos/"
             override="false" />
-  <property name="cdh.releases"
-            value="https://repository.cloudera.com/artifactory/cdh-releases-rcs/"
-            override="false" />
-  <property name="ext.releases"
-            value="http://repository.cloudera.com/artifactory/ext-release-local/"
-             override="false" />
-  <property name="snapshots.cloudera.com"
-            value="https://repository.cloudera.com/artifactory/libs-snapshot-local/"
-            override="false"/>
 
   <!-- pull in the local repository -->
   <include url="${ivy.default.conf.dir}/ivyconf-local.xml"/>
@@ -73,11 +64,6 @@
       pattern="${maven2.pattern.ext}"
       m2compatible="true"
       />
-    <ibiblio name="cdh-releases"
-      root="${cdh.releases}"
-      pattern="${maven2.pattern.ext}"
-      m2compatible="true"
-      />
     <ibiblio name="criteo.cloudera"
       root="${criteo.cloudera}"
       pattern="${maven2.pattern.ext}"
@@ -93,11 +79,7 @@
       pattern="${maven2.pattern.ext}"
       m2compatible="true"
       />
-    <ibiblio name="cloudera-snapshot"
-             root="${snapshots.cloudera.com}"
-             m2compatible="true"
-             checkmodified="true"
-             changingPattern=".*SNAPSHOT"/>
+
 
     <chain name="default" dual="true"
            checkmodified="true"
@@ -105,7 +87,6 @@
       <resolver ref="reactor-repo"/>
       <resolver ref="local"/>
       <resolver ref="maven2"/>
-      <resolver ref="cdh-releases"/>
       <resolver ref="criteo.cloudera"/>
       <resolver ref="criteo.cloudera_repos"/>
       <resolver ref="cloudera-snapshot"/> 
@@ -116,18 +97,15 @@
     </chain>
     <chain name="external">
       <resolver ref="maven2"/>
-      <resolver ref="cdh-releases"/>
       <resolver ref="criteo.cloudera"/>
       <resolver ref="criteo.cloudera_repos"/>
     </chain>
     <chain name="external-and-snapshots">
       <resolver ref="reactor-repo"/>
       <resolver ref="maven2"/>
-      <resolver ref="cdh-releases"/>
       <resolver ref="criteo.cloudera"/>
       <resolver ref="criteo.cloudera_repos"/>
       <resolver ref="apache-snapshot"/>
-      <resolver ref="cloudera-snapshot"/> 
     </chain>
   </resolvers>
   <modules>

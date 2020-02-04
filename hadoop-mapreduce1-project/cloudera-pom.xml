@@ -54,7 +54,7 @@ NOTE - This POM is used for Cloudera's build and packaging process.
       <repositories>
         <repository>
           <id>cdh.releases.repo</id>
-          <url>https://repository.cloudera.com/content/groups/cdh-releases-rcs</url>
+          <url>http://nexus.criteo.prod/content/repositories/cloudera</url>
           <name>CDH Releases Repository</name>
           <snapshots>
             <enabled>false</enabled>
@@ -62,7 +62,7 @@ NOTE - This POM is used for Cloudera's build and packaging process.
         </repository>
         <repository>
           <id>cdh.snapshots.repo</id>
-          <url>https://repository.cloudera.com/content/repositories/snapshots</url>
+          <url>http://nexus.criteo.prod/content/repositories/cloudera_repos</url>
           <name>CDH Snapshots Repository</name>
           <snapshots>
             <enabled>true</enabled>

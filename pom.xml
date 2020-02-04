@@ -49,7 +49,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
   <repositories>
     <repository>
       <id>cdh.repo</id>
-      <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
+      <url>http://nexus.criteo.prod/content/repositories/cloudera</url>
       <name>Cloudera Repositories</name>
       <snapshots>
         <enabled>false</enabled>
@@ -57,7 +57,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
     </repository>
     <repository>
       <id>cdh.snapshots.repo</id>
-      <url>https://repository.cloudera.com/artifactory/libs-snapshot-local</url>
+      <url>http://nexus.criteo.prod/content/repositories/cloudera_repos</url>
       <name>Cloudera Snapshots Repository</name>
       <snapshots>
         <enabled>true</enabled>
