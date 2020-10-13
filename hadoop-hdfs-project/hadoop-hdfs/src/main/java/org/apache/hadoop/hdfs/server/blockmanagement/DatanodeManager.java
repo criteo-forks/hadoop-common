@@ -231,8 +231,8 @@ public class DatanodeManager {
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
         DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
     this.heartbeatExpireInterval = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_DATANODE_HEARTBEAT_EXPIRE_INTERVAL_KEY,
-        DFSConfigKeys.DFS_NAMENODE_DATANODE_HEARTBEAT_EXPIRE_INTERVAL_DEFAULT); // 10 minutes
+            DFSConfigKeys.DFS_NAMENODE_DATANODE_HEARTBEAT_EXPIRE_INTERVAL_KEY,
+            DFSConfigKeys.DFS_NAMENODE_DATANODE_HEARTBEAT_EXPIRE_INTERVAL_DEFAULT);
     final int blockInvalidateLimit = Math.max(20*(int)(heartbeatIntervalSeconds),
         DFSConfigKeys.DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT);
     this.blockInvalidateLimit = conf.getInt(
