@@ -27,6 +27,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -327,7 +328,8 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
    */
   private static class SimulatedBPStorage {
     private long used;    // in bytes
-    
+    private final Map<Block, BInfo> blockMap = new TreeMap<>();
+
     long getUsed() {
       return used;
     }
@@ -340,6 +342,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       used -= amount;
     }
     
+    Map<Block, BInfo> getBlockMap() {
+      return blockMap;
+    }
+
     SimulatedBPStorage() {
       used = 0;   
     }
@@ -431,6 +437,14 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
       return new StorageReport(dnStorage,
           false, getCapacity(), getUsed(), getFree(),
           map.get(bpid).getUsed(), 0L);
+    }
+
+    Map<Block, BInfo> getBlockMap(String bpid) throws IOException {
+      SimulatedBPStorage bpStorage = map.get(bpid);
+      if (bpStorage == null) {
+        throw new IOException("Nonexistent block pool: " + bpid);
+      }
+      return bpStorage.getBlockMap();
     }
   }
   
@@ -1351,6 +1365,14 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   public ReplicaInfo moveBlockAcrossVolumes(ExtendedBlock block,
     FsVolumeSpi destination) throws IOException {
     return null;
+  }
+
+  @Override
+  public Set<? extends Replica> deepCopyReplica(String bpid)
+          throws IOException {
+    Set<BInfo> replicas = new HashSet<>();
+    replicas.addAll(storage.getBlockMap(bpid).values());
+    return Collections.unmodifiableSet(replicas);
   }
 
 }

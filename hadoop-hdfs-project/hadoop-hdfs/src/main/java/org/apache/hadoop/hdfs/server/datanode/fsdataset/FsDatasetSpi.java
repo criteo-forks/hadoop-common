@@ -651,4 +651,6 @@ public interface FsDatasetSpi<V extends FsVolumeSpi> extends FSDatasetMBean {
    */
   ReplicaInfo moveBlockAcrossVolumes(final ExtendedBlock block,
       FsVolumeSpi destination) throws IOException;
+
+  Set<? extends Replica> deepCopyReplica(String bpid) throws IOException;
 }

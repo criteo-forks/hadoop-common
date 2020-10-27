@@ -441,4 +441,11 @@ public class ExternalDatasetImpl implements FsDatasetSpi<ExternalVolumeImpl> {
     return null;
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public Set<? extends Replica> deepCopyReplica(String bpid)
+          throws IOException {
+    return Collections.EMPTY_SET;
+  }
+
 }
