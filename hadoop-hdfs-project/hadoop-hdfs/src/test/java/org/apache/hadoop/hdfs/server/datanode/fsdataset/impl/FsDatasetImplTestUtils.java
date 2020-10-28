@@ -30,6 +30,7 @@ import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.server.common.GenerationStamp;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.DataStorage;
@@ -396,7 +397,7 @@ public class FsDatasetImplTestUtils implements FsDatasetTestUtils {
       }
       return FsDatasetUtil.getGenerationStampFromFile(files, f, i);
     }
-    return HdfsConstants.GRANDFATHER_GENERATION_STAMP;
+    return GenerationStamp.GRANDFATHER_GENERATION_STAMP;
   }
 
   @Override
