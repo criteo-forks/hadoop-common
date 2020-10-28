@@ -3154,6 +3154,20 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
+  /**
+   * Return the number of BP service count.
+   */
+  public int getBPServiceCount() {
+    return datanode.getBpOsCount();
+  }
+
+  /**
+   * Return the number of volume.
+   */
+  public int getVolumeCount() {
+    return volumes.getVolumes().size();
+  }
+
   synchronized void stopAllDataxceiverThreads(FsVolumeImpl volume) {
     for (String blockPoolId : volumeMap.getBlockPoolList()) {
       Collection<ReplicaInfo> replicas = volumeMap.replicas(blockPoolId);

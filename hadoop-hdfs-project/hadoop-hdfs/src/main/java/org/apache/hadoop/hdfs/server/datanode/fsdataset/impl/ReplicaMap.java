@@ -135,6 +135,30 @@ class ReplicaMap {
   }
 
   /**
+  * Add a replica's meta information into the map, if already exist
+  * return the old replicaInfo.
+  */
+  ReplicaInfo addAndGet(String bpid, ReplicaInfo replicaInfo) {
+    checkBlockPool(bpid);
+    checkBlock(replicaInfo);
+    synchronized (mutex) {
+      FoldedTreeSet<ReplicaInfo> set = map.get(bpid);
+      if (set == null) {
+        // Add an entry for block pool if it does not exist already
+        set = new FoldedTreeSet<>();
+        map.put(bpid, set);
+      }
+      ReplicaInfo oldReplicaInfo = set.get(replicaInfo.getBlockId(), LONG_AND_BLOCK_COMPARATOR);
+      if (oldReplicaInfo != null) {
+        return oldReplicaInfo;
+      } else {
+        set.addOrReplace(replicaInfo);
+      }
+      return replicaInfo;
+    }
+  }
+
+  /**
    * Add all entries from the given replica map into the local replica map.
    */
   void addAll(ReplicaMap other) {
