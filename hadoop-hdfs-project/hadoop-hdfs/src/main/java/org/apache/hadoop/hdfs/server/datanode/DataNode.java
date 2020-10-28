@@ -1500,7 +1500,7 @@ public class DataNode extends ReconfigurableBase
     return blockPoolManager.get(bpid);
   }
   
-  int getBpOsCount() {
+  public int getBpOsCount() {
     return blockPoolManager.getAllNamenodeThreads().length;
   }
   
