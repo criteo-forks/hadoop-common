@@ -30,6 +30,8 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
  */
 public class FinalizedReplica extends ReplicaInfo {
 
+  private long metaLength = -1;
+
   /**
    * Constructor
    * @param blockId block id
@@ -42,7 +44,7 @@ public class FinalizedReplica extends ReplicaInfo {
       FsVolumeSpi vol, File dir) {
     super(blockId, len, genStamp, vol, dir);
   }
-  
+
   /**
    * Constructor
    * @param block a block
@@ -65,7 +67,7 @@ public class FinalizedReplica extends ReplicaInfo {
   public ReplicaState getState() {
     return ReplicaState.FINALIZED;
   }
-  
+
   @Override
   public long getVisibleLength() {
     return getNumBytes();       // all bytes are visible
@@ -76,16 +78,24 @@ public class FinalizedReplica extends ReplicaInfo {
     return getNumBytes();
   }
 
+  @Override
+  public long getMetadataLength() {
+    if (metaLength < 0) {
+        metaLength = super.getMetadataLength();
+    }
+    return metaLength;
+  }
+
   @Override  // Object
   public boolean equals(Object o) {
     return super.equals(o);
   }
-  
+
   @Override  // Object
   public int hashCode() {
     return super.hashCode();
   }
-  
+
   @Override
   public String toString() {
     return super.toString();
