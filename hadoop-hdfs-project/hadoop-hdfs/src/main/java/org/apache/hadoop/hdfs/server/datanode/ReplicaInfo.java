@@ -109,7 +109,14 @@ abstract public class ReplicaInfo extends Block implements Replica {
     return new File(getDir(),
         DatanodeUtil.getMetaName(getBlockName(), getGenerationStamp()));
   }
-  
+
+  /**
+   * Returns the length of the metadata file
+   */
+  public long getMetadataLength() {
+    return getMetaFile().length();
+  }
+
   /**
    * Get the volume where this replica is located on disk
    * @return the volume where this replica is located on disk
