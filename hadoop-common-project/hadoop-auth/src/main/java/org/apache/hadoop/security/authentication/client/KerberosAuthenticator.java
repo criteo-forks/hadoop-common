@@ -16,6 +16,7 @@ package org.apache.hadoop.security.authentication.client;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.security.authentication.util.AuthToken;
 import org.apache.hadoop.security.authentication.util.KerberosUtil;
+import org.apache.http.client.utils.URIBuilder;
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
@@ -31,6 +32,8 @@ import javax.security.auth.login.LoginException;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
+import java.net.InetAddress;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -178,9 +181,16 @@ public class KerberosAuthenticator implements Authenticator {
   public void authenticate(URL url, AuthenticatedURL.Token token)
     throws IOException, AuthenticationException {
     if (!token.isSet()) {
-      this.url = url;
+      try {
+        URIBuilder uriBuilder = new URIBuilder(url.toURI());
+        uriBuilder.setHost(InetAddress.getByName(url.getHost()).getCanonicalHostName());
+        this.url = uriBuilder.build().toURL();
+      } catch (URISyntaxException exception) {
+        throw new AuthenticationException("cannot convert url " + url + " to uri for spnego hostname canonicalization");
+      }
+
       base64 = new Base64(0);
-      conn = (HttpURLConnection) url.openConnection();
+      conn = (HttpURLConnection) this.url.openConnection();
       if (connConfigurator != null) {
         conn = connConfigurator.configure(conn);
       }
@@ -209,7 +219,7 @@ public class KerberosAuthenticator implements Authenticator {
         // Otherwise the fall back authenticator might not have the information
         // to make the connection (e.g., SSL certificates)
         auth.setConnectionConfigurator(connConfigurator);
-        auth.authenticate(url, token);
+        auth.authenticate(this.url, token);
       }
     }
   }
