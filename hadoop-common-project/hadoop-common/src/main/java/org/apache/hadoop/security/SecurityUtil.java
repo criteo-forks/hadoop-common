@@ -165,7 +165,7 @@ public class SecurityUtil {
         || !components[1].equals(HOSTNAME_PATTERN)) {
       return principalConfig;
     } else {
-      return replacePattern(components, hostname);
+      return replacePattern(components, InetAddress.getByName(hostname).getCanonicalHostName());
     }
   }
   
