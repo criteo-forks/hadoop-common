@@ -371,17 +371,6 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public void storeFinishedApplication(ApplicationId appId)
-      throws IOException {
-    String key = FINISHED_APPS_KEY_PREFIX + appId;
-    try {
-      db.put(bytes(key), new byte[0]);
-    } catch (DBException e) {
-      throw new IOException(e);
-    }
-  }
-
-  @Override
   public void removeApplication(ApplicationId appId)
       throws IOException {
     try {
