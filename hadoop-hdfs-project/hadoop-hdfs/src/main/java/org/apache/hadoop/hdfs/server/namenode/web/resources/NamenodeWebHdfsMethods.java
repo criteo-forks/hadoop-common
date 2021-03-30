@@ -183,6 +183,7 @@ public class NamenodeWebHdfsMethods {
     }
 
     if (op == PutOpParam.Op.CREATE) {
+      NameNode.getBlockPlacementMetrics().incrWebHDFSPlacements();
       //choose a datanode near to client 
       final DatanodeDescriptor clientNode = bm.getDatanodeManager(
           ).getDatanodeByHost(getRemoteAddress());

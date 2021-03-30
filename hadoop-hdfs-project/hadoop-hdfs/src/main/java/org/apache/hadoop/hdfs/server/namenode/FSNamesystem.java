@@ -3377,6 +3377,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         src, replication, clientNode, excludedNodes, blockSize, favoredNodes,
         storagePolicyID, flags);
 
+    incrementBlockPlacementMetrics(clientNode, targets);
+
     // Part II.
     // Allocate a new block, add it to the INode and the BlocksMap. 
     Block newBlock = null;
@@ -3624,9 +3626,33 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
     final DatanodeStorageInfo[] targets = blockManager.chooseTarget4AdditionalDatanode(
         src, numAdditionalNodes, clientnode, chosen, 
         excludes, preferredblocksize, storagePolicyID);
+
+    incrementBlockPlacementMetrics(clientnode, targets);
+
     final LocatedBlock lb = new LocatedBlock(blk, targets);
     blockManager.setBlockToken(lb, AccessMode.COPY);
     return lb;
+  }
+
+  private void incrementBlockPlacementMetrics(Node clientNode, DatanodeStorageInfo[] targets) {
+    BlockPlacementMetrics metrics = NameNode.getBlockPlacementMetrics();
+    if (clientNode == null) {
+      metrics.incrAbsentClientNode();
+    } else {
+      for (DatanodeStorageInfo target : targets) {
+        if (target.getDatanodeDescriptor().equals(clientNode)) {
+          metrics.incrHostLocalPlacements();
+        } else if (blockManager
+                .getDatanodeManager()
+                .getNetworkTopology()
+                .isOnSameRack(clientNode, target.getDatanodeDescriptor())
+        ) {
+          metrics.incrRackLocalPlacements();
+        } else {
+          metrics.incrOffSwitchPlacements();
+        }
+      }
+    }
   }
 
   /**
