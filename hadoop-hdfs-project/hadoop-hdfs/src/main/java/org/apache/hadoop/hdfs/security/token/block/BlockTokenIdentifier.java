@@ -20,10 +20,12 @@ package org.apache.hadoop.hdfs.security.token.block;
 
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.EnumSet;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdfs.StorageType;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenSecretManager.AccessMode;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
@@ -41,6 +43,9 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private String blockPoolId;
   private long blockId;
   private final EnumSet<AccessMode> modes;
+  private StorageType[] storageTypes;
+  private String[] storageIds;
+  private byte[] handshakeMsg;
 
   private byte [] cache;
   
@@ -154,6 +159,33 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     for (int i = 0; i < length; i++) {
       modes.add(WritableUtils.readEnum(in, AccessMode.class));
     }
+
+    try {
+      length = WritableUtils.readVInt(in);
+      StorageType[] readStorageTypes = new StorageType[length];
+      for (int i = 0; i < length; i++) {
+        readStorageTypes[i] = WritableUtils.readEnum(in, StorageType.class);
+      }
+      storageTypes = readStorageTypes;
+
+      length = WritableUtils.readVInt(in);
+      String[] readStorageIds = new String[length];
+      for (int i = 0; i < length; i++) {
+        readStorageIds[i] = WritableUtils.readString(in);
+      }
+      storageIds = readStorageIds;
+
+      int handshakeMsgLen = WritableUtils.readVInt(in);
+      if (handshakeMsgLen != 0) {
+        handshakeMsg = new byte[handshakeMsgLen];
+        in.readFully(handshakeMsg);
+      }
+    } catch (EOFException eof) {
+      // If the NameNode is on a version before HDFS-6708 and HDFS-9807, then
+      // the block token won't have storage types or storage IDs. For backward
+      // compatibility, swallow the EOF that we get when we try to read those
+      // fields. Same for the handshake secret field from HDFS-14611.
+    }
   }
 
   @Override
@@ -166,6 +198,22 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     WritableUtils.writeVInt(out, modes.size());
     for (AccessMode aMode : modes) {
       WritableUtils.writeEnum(out, aMode);
+    }
+    if (storageTypes != null) {
+      WritableUtils.writeVInt(out, storageTypes.length);
+      for (StorageType type : storageTypes) {
+        WritableUtils.writeEnum(out, type);
+      }
+    }
+    if (storageIds != null) {
+      WritableUtils.writeVInt(out, storageIds.length);
+      for (String id : storageIds) {
+        WritableUtils.writeString(out, id);
+      }
+    }
+    if (handshakeMsg != null && handshakeMsg.length > 0) {
+      WritableUtils.writeVInt(out, handshakeMsg.length);
+      out.write(handshakeMsg);
     }
   }
   
