@@ -160,6 +160,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
       modes.add(WritableUtils.readEnum(in, AccessMode.class));
     }
 
+    //the following lines comes from the same class on branch-3.3.0
     try {
       length = WritableUtils.readVInt(in);
       StorageType[] readStorageTypes = new StorageType[length];
@@ -199,6 +200,8 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     for (AccessMode aMode : modes) {
       WritableUtils.writeEnum(out, aMode);
     }
+
+    //the following lines comes from the same class on branch-3.3.0
     if (storageTypes != null) {
       WritableUtils.writeVInt(out, storageTypes.length);
       for (StorageType type : storageTypes) {
