@@ -42,6 +42,9 @@ import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheP
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.BlockProto;
 import org.apache.hadoop.hdfs.protocol.proto.XAttrProtos;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext.DeduplicatedStringTable;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext.ExpandedStringTable;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext.StringTable;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.CacheManagerSection;
@@ -228,7 +231,7 @@ public final class PBImageXmlWriter {
   private final Configuration conf;
   private final PrintWriter out;
   private final SimpleDateFormat isoDateFormat;
-  private String[] stringTable;
+  private StringTable stringTable;
 
   public static SimpleDateFormat createSimpleDateFormat() {
     SimpleDateFormat format =
@@ -391,7 +394,7 @@ public final class PBImageXmlWriter {
       o(INODE_SECTION_NS, XAttrProtos.XAttrProto.
           XAttrNamespaceProto.valueOf(ns).toString());
       o(SECTION_NAME,
-          stringTable[XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET)]);
+          stringTable.getXattr(XATTR_NAME_MASK & (encodedName >> XATTR_NAME_OFFSET)));
       ByteString val = xattr.getValue();
       if (val.isValidUtf8()) {
         o(INODE_SECTION_VAL, val.toStringUtf8());
@@ -730,11 +733,15 @@ public final class PBImageXmlWriter {
 
   private void loadStringTable(InputStream in) throws IOException {
     StringTableSection s = StringTableSection.parseDelimitedFrom(in);
-    stringTable = new String[s.getNumEntry() + 1];
+    if(s.hasMaskBits()) {
+      stringTable = new ExpandedStringTable(s.getMaskBits());
+    } else {
+      stringTable = new DeduplicatedStringTable(s.getNumEntry() + 1);
+    }
     for (int i = 0; i < s.getNumEntry(); ++i) {
       StringTableSection.Entry e = StringTableSection.Entry
-          .parseDelimitedFrom(in);
-      stringTable[e.getId()] = e.getStr();
+              .parseDelimitedFrom(in);
+      stringTable.put(e.getId(), e.getStr());
     }
   }
 
