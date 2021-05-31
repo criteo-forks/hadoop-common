@@ -69,7 +69,7 @@ public class DefaultResourceCalculator extends ResourceCalculator {
         roundUp(
             Math.max(r.getMemory(), minimumResource.getMemory()),
             stepFactor.getMemory()),
-            maximumResource.getMemory());
+            Math.max(minimumResource.getMemory(), maximumResource.getMemory()));
     return Resources.createResource(normalizedMemory);
   }
 
