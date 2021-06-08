@@ -1986,7 +1986,14 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         measureDistanceToFirstLocation(clientMachine, b);
       }
       // lastBlock is not part of getLocatedBlocks(), so we need to check it individually
-      if (lastBlock != null) {
+      // That's a comment above, but through testing, sometime,
+      // lastLocatedBlock is the same block as the last located block in the list
+      // thus add one test to check equality between lastBlock and the last in LocatedBlocks list
+      int locatedBlocksSize = blocks.getLocatedBlocks().size();
+      if (lastBlock != null &&
+              locatedBlocksSize > 0 &&
+              !lastBlock.getBlock().equals(blocks.getLocatedBlocks().get(locatedBlocksSize - 1).getBlock())
+      ) {
         measureDistanceToFirstLocation(clientMachine, lastBlock);
       }
     }
