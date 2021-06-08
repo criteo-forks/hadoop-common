@@ -17,11 +17,11 @@ import static org.apache.hadoop.metrics2.impl.MsInfo.SessionId;
 public class ReadLocalityMetrics {
     final MetricsRegistry registry = new MetricsRegistry("namenode");
 
-    @Metric("Number of placement on the same host as the writer")
+    @Metric("Number of placements on the same host as the writer")
     MutableCounterLong hostLocalReads;
-    @Metric("Number of placement on the same rack as the writer")
+    @Metric("Number of placements on the same rack as the writer")
     MutableCounterLong rackLocalReads;
-    @Metric("Number of placement on a different rack as the writer")
+    @Metric("Number of placements on a different rack as the writer")
     MutableCounterLong offSwitchReads;
 
     ReadLocalityMetrics(String processName, String sessionId) {

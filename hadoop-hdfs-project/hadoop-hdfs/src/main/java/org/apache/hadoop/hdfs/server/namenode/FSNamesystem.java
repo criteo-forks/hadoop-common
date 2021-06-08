@@ -2004,7 +2004,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
   private void measureDistanceToFirstLocation(String clientMachine, LocatedBlock locatedBlock) {
     DatanodeInfo[] locs = locatedBlock.getLocations();
     if(locs.length > 0) {
-      DatanodeInfo closerLocation = locs[0];
+      DatanodeInfo closestLocation = locs[0];
       NetworkTopology networkTopology = blockManager.getDatanodeManager().getNetworkTopology();
 
       //mimic code in DatanodeManager.sortLocatedBlocks
@@ -2028,7 +2028,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
       }
 
       //client could be null due to the code above, but getWeight method accepts null first parameter
-      int weight = networkTopology.getWeight(client, closerLocation);
+      int weight = networkTopology.getWeight(client, closestLocation);
       //describe in method getWeight: 0 is local, 1 is same rack, 2 is off rack
       ReadLocalityMetrics readLocalityMetrics = NameNode.getReadLocalityMetrics();
       if (weight == 0) {
