@@ -350,6 +350,7 @@ public class NameNode implements NameNodeStatusMXBean {
 
   static NameNodeMetrics metrics;
   static BlockPlacementMetrics blockPlacementMetrics;
+  static ReadLocalityMetrics readLocalityMetrics;
   private static final StartupProgress startupProgress = new StartupProgress();
   /** Return the {@link FSNamesystem} object.
    * @return {@link FSNamesystem} object.
@@ -365,6 +366,7 @@ public class NameNode implements NameNodeStatusMXBean {
   static void initMetrics(Configuration conf, NamenodeRole role) {
     metrics = NameNodeMetrics.create(conf, role);
     blockPlacementMetrics = BlockPlacementMetrics.create(conf, role);
+    readLocalityMetrics = ReadLocalityMetrics.create(conf, role);
   }
 
   public static NameNodeMetrics getNameNodeMetrics() {
@@ -373,6 +375,10 @@ public class NameNode implements NameNodeStatusMXBean {
 
   public static BlockPlacementMetrics getBlockPlacementMetrics() {
     return blockPlacementMetrics;
+  }
+
+  public static ReadLocalityMetrics getReadLocalityMetrics() {
+    return readLocalityMetrics;
   }
 
   /**

@@ -254,7 +254,7 @@ public class NetworkTopologyWithNodeGroup extends NetworkTopology {
   }
 
   @Override
-  protected int getWeight(Node reader, Node node) {
+  public int getWeight(Node reader, Node node) {
     // 0 is local, 1 is same node group, 2 is same rack, 3 is off rack
     // Start off by initializing to off rack
     int weight = 3;

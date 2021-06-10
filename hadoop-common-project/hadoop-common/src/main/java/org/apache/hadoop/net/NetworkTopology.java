@@ -920,7 +920,7 @@ public class NetworkTopology {
    * @param node Replica of data
    * @return weight
    */
-  protected int getWeight(Node reader, Node node) {
+  public int getWeight(Node reader, Node node) {
     // 0 is local, 1 is same rack, 2 is off rack
     // Start off by initializing to off rack
     int weight = 2;

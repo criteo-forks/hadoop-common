@@ -1979,8 +1979,66 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
         blockManager.getDatanodeManager().sortLocatedBlocks(
             clientMachine, lastBlockList);
       }
+
+      //Locations of LocatedBlocks have been sorted
+      //Measure distance to first location of all block to get a feeling of read locality within the cluster
+      for(LocatedBlock b : blocks.getLocatedBlocks()) {
+        measureDistanceToFirstLocation(clientMachine, b);
+      }
+      // lastBlock is not part of getLocatedBlocks(), so we need to check it individually
+      // That's a comment above, but through testing, sometime,
+      // lastLocatedBlock is the same block as the last located block in the list
+      // thus add one test to check equality between lastBlock and the last in LocatedBlocks list
+      int locatedBlocksSize = blocks.getLocatedBlocks().size();
+      if (lastBlock != null &&
+              locatedBlocksSize > 0 &&
+              !lastBlock.getBlock().equals(blocks.getLocatedBlocks().get(locatedBlocksSize - 1).getBlock())
+      ) {
+        measureDistanceToFirstLocation(clientMachine, lastBlock);
+      }
     }
+
     return blocks;
+  }
+
+  private void measureDistanceToFirstLocation(String clientMachine, LocatedBlock locatedBlock) {
+    DatanodeInfo[] locs = locatedBlock.getLocations();
+    if(locs.length > 0) {
+      DatanodeInfo closestLocation = locs[0];
+      NetworkTopology networkTopology = blockManager.getDatanodeManager().getNetworkTopology();
+
+      //mimic code in DatanodeManager.sortLocatedBlocks
+      //to be able to create a Node object representing possibly an offswitch client
+      //then we can use NetworkTopology to measure the distance
+      Node client = blockManager.getDatanodeManager().getDatanodeByHost(clientMachine);
+      if (client == null) {
+        List<String> hosts = new ArrayList<String> (1);
+        hosts.add(clientMachine);
+        List<String> resolvedHosts = blockManager.getDatanodeManager().resolveNetworkLocation(hosts);
+        if (resolvedHosts != null && !resolvedHosts.isEmpty()) {
+          String rName = resolvedHosts.get(0);
+          if (rName != null) {
+            client = new NodeBase(rName + NodeBase.PATH_SEPARATOR_STR +
+                    clientMachine);
+          }
+        } else {
+          LOG.error("Node Resolution failed. Please make sure that rack " +
+                  "awareness scripts are functional.");
+        }
+      }
+
+      //client could be null due to the code above, but getWeight method accepts null first parameter
+      int weight = networkTopology.getWeight(client, closestLocation);
+      //describe in method getWeight: 0 is local, 1 is same rack, 2 is off rack
+      ReadLocalityMetrics readLocalityMetrics = NameNode.getReadLocalityMetrics();
+      if (weight == 0) {
+        readLocalityMetrics.incrHostLocalReads();
+      } else if (weight == 1) {
+        readLocalityMetrics.incrRackLocalReads();
+      } else {
+        readLocalityMetrics.incrOffSwitchReads();
+      }
+    }
   }
 
   /**
