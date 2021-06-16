@@ -18,7 +18,6 @@
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
 import java.io.BufferedInputStream;
-import java.io.EOFException;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -45,8 +44,12 @@ import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext.DeduplicatedStringTable;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext.ExpandedStringTable;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext.StringTable;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto.StringTableSection;
 import org.apache.hadoop.hdfs.server.namenode.INodeId;
 import org.apache.hadoop.hdfs.web.JsonUtil;
 import org.apache.hadoop.io.IOUtils;
@@ -64,7 +67,7 @@ import com.google.common.collect.Maps;
 class FSImageLoader {
   public static final Log LOG = LogFactory.getLog(FSImageHandler.class);
 
-  private final String[] stringTable;
+  private final StringTable stringTable;
   // byte representation of inodes, sorted by id
   private final byte[][] inodes;
   private final Map<Long, long[]> dirmap;
@@ -90,7 +93,7 @@ class FSImageLoader {
     }
   };
 
-  private FSImageLoader(String[] stringTable, byte[][] inodes,
+  private FSImageLoader(StringTable stringTable, byte[][] inodes,
                         Map<Long, long[]> dirmap) {
     this.stringTable = stringTable;
     this.inodes = inodes;
@@ -116,7 +119,7 @@ class FSImageLoader {
     try {
       // Map to record INodeReference to the referred id
       ImmutableList<Long> refIdList = null;
-      String[] stringTable = null;
+      StringTable stringTable = null;
       byte[][] inodes = null;
       Map<Long, long[]> dirmap = null;
 
@@ -243,16 +246,19 @@ class FSImageLoader {
     return inodes;
   }
 
-  static String[] loadStringTable(InputStream in) throws
+  static StringTable loadStringTable(InputStream in) throws
   IOException {
-    FsImageProto.StringTableSection s = FsImageProto.StringTableSection
-        .parseDelimitedFrom(in);
-    LOG.info("Loading " + s.getNumEntry() + " strings");
-    String[] stringTable = new String[s.getNumEntry() + 1];
+    StringTableSection s = StringTableSection.parseDelimitedFrom(in);
+    StringTable stringTable;
+    if(s.hasMaskBits()) {
+      stringTable = new ExpandedStringTable(s.getMaskBits());
+    } else {
+      stringTable = new DeduplicatedStringTable(s.getNumEntry() + 1);
+    }
     for (int i = 0; i < s.getNumEntry(); ++i) {
-      FsImageProto.StringTableSection.Entry e = FsImageProto
-          .StringTableSection.Entry.parseDelimitedFrom(in);
-      stringTable[e.getId()] = e.getStr();
+      StringTableSection.Entry e = StringTableSection.Entry
+              .parseDelimitedFrom(in);
+      stringTable.put(e.getId(), e.getStr());
     }
     return stringTable;
   }

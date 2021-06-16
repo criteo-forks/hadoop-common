@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext.StringTable;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SaverContext;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FilesUnderConstructionSection.FileUnderConstructionEntry;
@@ -99,23 +100,23 @@ public final class FSImageFormatPBINode {
 
   public final static class Loader {
     public static PermissionStatus loadPermission(long id,
-        final String[] stringTable) {
+        final StringTable stringTable) {
       short perm = (short) (id & ((1 << GROUP_STRID_OFFSET) - 1));
       int gsid = (int) ((id >> GROUP_STRID_OFFSET) & USER_GROUP_STRID_MASK);
       int usid = (int) ((id >> USER_STRID_OFFSET) & USER_GROUP_STRID_MASK);
-      return new PermissionStatus(stringTable[usid], stringTable[gsid],
+      return new PermissionStatus(stringTable.getUser(usid), stringTable.getGroup(gsid),
           new FsPermission(perm));
     }
 
     public static ImmutableList<AclEntry> loadAclEntries(
-        AclFeatureProto proto, final String[] stringTable) {
+        AclFeatureProto proto, final StringTable stringTable) {
       ImmutableList.Builder<AclEntry> b = ImmutableList.builder();
       for (int v : proto.getEntriesList()) {
         int p = v & ACL_ENTRY_PERM_MASK;
         int t = (v >> ACL_ENTRY_TYPE_OFFSET) & ACL_ENTRY_TYPE_MASK;
         int s = (v >> ACL_ENTRY_SCOPE_OFFSET) & ACL_ENTRY_SCOPE_MASK;
         int nid = (v >> ACL_ENTRY_NAME_OFFSET) & ACL_ENTRY_NAME_MASK;
-        String name = stringTable[nid];
+        String name = stringTable.getAcl(ACL_ENTRY_TYPE_VALUES[t], nid);
         b.add(new AclEntry.Builder().setName(name)
             .setPermission(FSACTION_VALUES[p])
             .setScope(ACL_ENTRY_SCOPE_VALUES[s])
@@ -125,7 +126,7 @@ public final class FSImageFormatPBINode {
     }
     
     public static ImmutableList<XAttr> loadXAttrs(
-        XAttrFeatureProto proto, final String[] stringTable) {
+        XAttrFeatureProto proto, final StringTable stringTable) {
       ImmutableList.Builder<XAttr> b = ImmutableList.builder();
       for (XAttrCompactProto xAttrCompactProto : proto.getXAttrsList()) {
         int v = xAttrCompactProto.getName();
@@ -133,7 +134,7 @@ public final class FSImageFormatPBINode {
         int ns = (v >> XATTR_NAMESPACE_OFFSET) & XATTR_NAMESPACE_MASK;
         ns |=
             ((v >> XATTR_NAMESPACE_EXT_OFFSET) & XATTR_NAMESPACE_EXT_MASK) << 2;
-        String name = stringTable[nid];
+        String name = stringTable.getXattr(nid);
         byte[] value = null;
         if (xAttrCompactProto.getValue() != null) {
           value = xAttrCompactProto.getValue().toByteArray();

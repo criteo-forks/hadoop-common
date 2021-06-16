@@ -36,10 +36,14 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import org.apache.hadoop.fs.permission.AclEntryType;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext.DeduplicatedStringTable;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext.ExpandedStringTable;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,8 +53,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CacheDirectiveInfoProto;
 import org.apache.hadoop.hdfs.protocol.proto.ClientNamenodeProtocolProtos.CachePoolInfoProto;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
-import org.apache.hadoop.hdfs.server.common.InconsistentFSStateException;
-import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.CacheManagerSection;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.FileSummary;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.NameSystemSection;
@@ -81,15 +83,123 @@ public final class FSImageFormatProtobuf {
       .getLogger(FSImageFormatProtobuf.class);
 
   public static final class LoaderContext {
-    private String[] stringTable;
+    private StringTable stringTable;
     private final ArrayList<INodeReference> refList = Lists.newArrayList();
 
-    public String[] getStringTable() {
+    public StringTable getStringTable() {
       return stringTable;
     }
 
     public ArrayList<INodeReference> getRefList() {
       return refList;
+    }
+
+    public interface StringTable {
+
+      String getUser(int usid);
+
+      String getGroup(int gsid);
+
+      String getAcl(AclEntryType type, int nid);
+
+      String getXattr(int nid);
+
+      void put(int id, String s);
+    }
+
+    public static class DeduplicatedStringTable implements StringTable {
+      //StringTable backed by an array, no distinction between user, groups etc..
+      String[] stringTable;
+
+      public DeduplicatedStringTable(int size) {
+        stringTable = new String[size];
+      }
+
+      @Override
+      public String getUser(int usid) {
+        return stringTable[usid];
+      }
+
+      @Override
+      public String getGroup(int gsid) {
+        return stringTable[gsid];
+      }
+
+      @Override
+      public String getAcl(AclEntryType type, int nid) {
+        return stringTable[nid];
+      }
+
+      @Override
+      public String getXattr(int nid) {
+        return stringTable[nid];
+      }
+
+      @Override
+      public void put(int id, String s) {
+        stringTable[id] = s;
+      }
+    }
+
+    public static class ExpandedStringTable implements StringTable {
+
+      private Map<Integer, String> globalMap = new HashMap<>();
+      private Map<Integer, String> userMap = new HashMap<>();
+      private Map<Integer, String> groupMap = new HashMap<>();
+      private Map<Integer, String> xattrMap = new HashMap<>();
+
+      private int globalMask;
+      private int userMask;
+      private int groupMask;
+      private int xattrMask;
+
+      public ExpandedStringTable(int maskBits) {
+        this.globalMask = 0;
+        this.userMask = 1 << (Integer.SIZE - maskBits);
+        this.groupMask = 2 << (Integer.SIZE - maskBits);
+        this.xattrMask = 3 << (Integer.SIZE - maskBits);
+      }
+
+      @Override
+      public String getUser(int usid) {
+        return userMap.get(usid);
+      }
+
+      @Override
+      public String getGroup(int gsid) {
+        return groupMap.get(gsid);
+      }
+
+      @Override
+      public String getAcl(AclEntryType type, int nid) {
+        switch (type) {
+          case USER:
+            return userMap.get(nid);
+          case GROUP:
+            return groupMap.get(nid);
+          default:
+            return null;
+        }
+      }
+
+      @Override
+      public String getXattr(int nid) {
+        return xattrMap.get(nid);
+      }
+
+      @Override
+      public void put(int id, String s) {
+        if (id < userMask) {
+          globalMap.put(id ^ globalMask, s);
+        } else if (id < groupMask) {
+          userMap.put(id ^ userMask, s);
+        } else if (id < xattrMask) {
+          groupMap.put(id ^ groupMask, s);
+        } else {
+          xattrMap.put(id ^ xattrMask, s);
+        }
+      }
+
     }
   }
 
@@ -312,11 +422,15 @@ public final class FSImageFormatProtobuf {
 
     private void loadStringTableSection(InputStream in) throws IOException {
       StringTableSection s = StringTableSection.parseDelimitedFrom(in);
-      ctx.stringTable = new String[s.getNumEntry() + 1];
+      if(s.hasMaskBits()) {
+        ctx.stringTable = new ExpandedStringTable(s.getMaskBits());
+      } else {
+        ctx.stringTable = new DeduplicatedStringTable(s.getNumEntry() + 1);
+      }
       for (int i = 0; i < s.getNumEntry(); ++i) {
         StringTableSection.Entry e = StringTableSection.Entry
             .parseDelimitedFrom(in);
-        ctx.stringTable[e.getId()] = e.getStr();
+        ctx.stringTable.put(e.getId(), e.getStr());
       }
     }
 

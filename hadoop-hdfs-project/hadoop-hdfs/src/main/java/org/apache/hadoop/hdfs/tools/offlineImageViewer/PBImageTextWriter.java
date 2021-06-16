@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatPBINode;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf;
+import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.LoaderContext.StringTable;
 import org.apache.hadoop.hdfs.server.namenode.FSImageFormatProtobuf.SectionName;
 import org.apache.hadoop.hdfs.server.namenode.FSImageUtil;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
@@ -391,7 +392,7 @@ abstract class PBImageTextWriter implements Closeable {
     }
   }
 
-  private String[] stringTable;
+  private StringTable stringTable;
   private PrintStream out;
   private MetadataMap metadataMap = null;
 
