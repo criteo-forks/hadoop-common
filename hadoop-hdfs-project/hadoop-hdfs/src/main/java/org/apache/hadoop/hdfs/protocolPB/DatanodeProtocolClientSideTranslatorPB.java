@@ -21,8 +21,10 @@ package org.apache.hadoop.hdfs.protocolPB;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.List;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -40,12 +42,15 @@ import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.CommitBlockS
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.DatanodeCommandProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ErrorReportRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.HeartbeatRequestProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.HeartbeatResponseHDP3Proto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.HeartbeatResponseProto;
+import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.NNHAStatusHeartbeatProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterDatanodeRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.RegisterDatanodeResponseProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.ReportBadBlocksRequestProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageBlockReportProto;
 import org.apache.hadoop.hdfs.protocol.proto.DatanodeProtocolProtos.StorageReceivedDeletedBlocksProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.RollingUpgradeStatusProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.VersionRequestProto;
 import org.apache.hadoop.hdfs.server.protocol.BlockReportContext;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeCommand;
@@ -70,6 +75,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This class is the client side translator to translate the requests made on
@@ -80,6 +87,9 @@ import com.google.protobuf.ServiceException;
 @InterfaceStability.Stable
 public class DatanodeProtocolClientSideTranslatorPB implements
     ProtocolMetaInterface, DatanodeProtocol, Closeable {
+
+  public static final Logger LOG =
+          LoggerFactory.getLogger(DatanodeProtocolClientSideTranslatorPB.class);
   
   /** RpcController is not used and hence is set to null */
   private final DatanodeProtocolPB rpcProxy;
@@ -149,9 +159,9 @@ public class DatanodeProtocolClientSideTranslatorPB implements
       builder.setVolumeFailureSummary(PBHelper.convertVolumeFailureSummary(
           volumeFailureSummary));
     }
-    HeartbeatResponseProto resp;
+    HeartbeatResponseProtoWrapper resp;
     try {
-      resp = rpcProxy.sendHeartbeat(NULL_CONTROLLER, builder.build());
+      resp = new HeartbeatResponseProtoWrapper(rpcProxy.sendHeartbeat(NULL_CONTROLLER, builder.build()));
     } catch (ServiceException se) {
       throw ProtobufHelper.getRemoteException(se);
     }
@@ -171,6 +181,86 @@ public class DatanodeProtocolClientSideTranslatorPB implements
     }
     return new HeartbeatResponse(cmds, PBHelper.convert(resp.getHaStatus()),
         rollingUpdateStatus, resp.getFullBlockReportLeaseId());
+  }
+
+  static class HeartbeatResponseProtoWrapper {
+
+    private HeartbeatResponseProto original;
+    private HeartbeatResponseHDP3Proto maybeHdp3;
+
+    HeartbeatResponseProtoWrapper(HeartbeatResponseProto original) {
+      this.original = original;
+      //when the proto comes from an HDP3 namenode, the filed indexing is different
+      //leading proto to detect unknown fields
+      //we use this method to detect that the proto originates from HDP3 and if so convert
+      //it with the correct proto class
+      if(original.getUnknownFields().hasField(5)) {
+        try {
+          this.maybeHdp3 = HeartbeatResponseHDP3Proto.parseFrom(original.toByteArray());
+        } catch (InvalidProtocolBufferException e) {
+          LOG.error("Detected an HDP3 HeartbeatResponseProto but could not deserialize it", e);
+          this.maybeHdp3 = null;
+        }
+      } else {
+        this.maybeHdp3 = null;
+      }
+    }
+
+    public List<DatanodeCommandProto> getCmdsList() {
+      if(maybeHdp3 != null) {
+        return maybeHdp3.getCmdsList();
+      } else {
+        return original.getCmdsList();
+      }
+    }
+
+    public boolean hasRollingUpgradeStatusV2() {
+      if(maybeHdp3 != null) {
+        return maybeHdp3.hasRollingUpgradeStatusV2();
+      } else {
+        return original.hasRollingUpgradeStatusV2();
+      }
+    }
+
+    public RollingUpgradeStatusProto getRollingUpgradeStatusV2() {
+      if(maybeHdp3 != null) {
+        return maybeHdp3.getRollingUpgradeStatusV2();
+      } else {
+        return original.getRollingUpgradeStatusV2();
+      }
+    }
+
+    public boolean hasRollingUpgradeStatus() {
+      if(maybeHdp3 != null) {
+        return maybeHdp3.hasRollingUpgradeStatus();
+      } else {
+        return original.hasRollingUpgradeStatus();
+      }
+    }
+
+    public RollingUpgradeStatusProto getRollingUpgradeStatus() {
+      if(maybeHdp3 != null) {
+        return maybeHdp3.getRollingUpgradeStatus();
+      } else {
+        return original.getRollingUpgradeStatus();
+      }
+    }
+
+    public NNHAStatusHeartbeatProto getHaStatus() {
+      if(maybeHdp3 != null) {
+        return maybeHdp3.getHaStatus();
+      } else {
+        return original.getHaStatus();
+      }
+    }
+
+    public long getFullBlockReportLeaseId() {
+      if(maybeHdp3 != null) {
+        return maybeHdp3.getFullBlockReportLeaseId();
+      } else {
+        return original.getFullBlockReportLeaseId();
+      }
+    }
   }
 
   @Override

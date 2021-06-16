@@ -222,6 +222,14 @@ message HeartbeatResponseProto {
   optional RollingUpgradeStatusProto rollingUpgradeStatusV2 = 5;
 }
 
+message HeartbeatResponseHDP3Proto {
+  repeated DatanodeCommandProto cmds = 1; // Returned commands can be null
+  required NNHAStatusHeartbeatProto haStatus = 2;
+  optional RollingUpgradeStatusProto rollingUpgradeStatus = 3;
+  optional RollingUpgradeStatusProto rollingUpgradeStatusV2 = 4;
+  optional uint64 fullBlockReportLeaseId = 5 [ default = 0 ];
+}
+
 /**
  * registration - datanode registration information
  * blockPoolID  - block pool ID of the reported blocks
