@@ -558,7 +558,7 @@ public class ZKRMStateStore extends RMStateStore {
           RMDelegationTokenIdentifier identifier =
               new RMDelegationTokenIdentifier();
           identifier.readFields(fsIn);
-          long renewDate = fsIn.readLong();
+          long renewDate = identifier.getRenewDate();
           rmState.rmSecretManagerState.delegationTokenState.put(identifier,
               renewDate);
         }
