@@ -51,6 +51,7 @@ import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.Appl
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.ApplicationStateDataProto;
 import org.apache.hadoop.yarn.proto.YarnServerResourceManagerRecoveryProtos.EpochProto;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifierData;
 import org.apache.hadoop.yarn.server.records.impl.pb.VersionPBImpl;
 import org.apache.hadoop.yarn.server.records.Version;
 import org.apache.hadoop.yarn.server.resourcemanager.RMZKUtils;
@@ -555,10 +556,9 @@ public class ZKRMStateStore extends RMStateStore {
 
       try {
         if (childNodeName.startsWith(DELEGATION_TOKEN_PREFIX)) {
-          RMDelegationTokenIdentifier identifier =
-              new RMDelegationTokenIdentifier();
-          identifier.readFields(fsIn);
-          long renewDate = identifier.getRenewDate();
+          RMDelegationTokenIdentifierData idData = new RMDelegationTokenIdentifierData(fsIn);
+          RMDelegationTokenIdentifier identifier = idData.getRMDelegationTokenIdentifier();
+          long renewDate = idData.getRenewDate();
           rmState.rmSecretManagerState.delegationTokenState.put(identifier,
               renewDate);
         }

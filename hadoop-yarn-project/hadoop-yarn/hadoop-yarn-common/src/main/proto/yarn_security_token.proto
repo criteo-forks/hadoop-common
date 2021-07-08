@@ -31,6 +31,7 @@ message ClientToAMTokenIdentifierProto {
   optional string clientName = 2;
 }
 
+//used for RMDelegationToken in HDP3
 message YARNDelegationTokenIdentifierProto {
   optional string owner = 1;
   optional string renewer = 2;
@@ -41,6 +42,7 @@ message YARNDelegationTokenIdentifierProto {
   optional int32 masterKeyId = 7;
 }
 
+//used for RMZKStateStore in HDP3
 message RMDelegationTokenIdentifierDataProto {
   optional YARNDelegationTokenIdentifierProto token_identifier = 1;
   optional int64 renewDate = 2;

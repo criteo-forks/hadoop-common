@@ -58,8 +58,7 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
 
   public static final Text KIND_NAME = new Text("RM_DELEGATION_TOKEN");
 
-  RMDelegationTokenIdentifierDataProto.Builder builder =
-          RMDelegationTokenIdentifierDataProto.newBuilder();
+  YARNDelegationTokenIdentifierProto.Builder builder = YARNDelegationTokenIdentifierProto.newBuilder();
 
   public RMDelegationTokenIdentifier() {
   }
@@ -68,33 +67,24 @@ public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifi
   public void readFields(DataInput in) throws IOException {
     byte[] data = IOUtils.readFullyToByteArray(in);
     try {
+      //HDP2 style
       DataInput di = new DataInputStream(new ByteArrayInputStream(data));
-      super.readFields(di);
-      //renewdate is not necessarily present, don't fail
-      try {
-        this.renewDate = di.readLong();
-      } catch (IOException e) {
-        //ignore
-      }
+      this.readFieldsOldFormat(di);
     } catch (IOException e) {
-      //failed to read in old format style, maybe this is a new proto based token
+      //HDP3 style based on proto
       builder.mergeFrom(data);
-      YARNDelegationTokenIdentifierProto tokenIdentifier = builder.getTokenIdentifier();
-      setOwner(new Text(tokenIdentifier.getOwner()));
-      setRenewer(new Text(tokenIdentifier.getRenewer()));
-      setRealUser(new Text(tokenIdentifier.getRealUser()));
-      setIssueDate(tokenIdentifier.getIssueDate());
-      setMaxDate(tokenIdentifier.getMaxDate());
-      setSequenceNumber(tokenIdentifier.getSequenceNumber());
-      setMasterKeyId(tokenIdentifier.getMasterKeyId());
-      this.renewDate = builder.getRenewDate();
+      setOwner(new Text(builder.getOwner()));
+      setRenewer(new Text(builder.getRenewer()));
+      setRealUser(new Text(builder.getRealUser()));
+      setIssueDate(builder.getIssueDate());
+      setMaxDate(builder.getMaxDate());
+      setSequenceNumber(builder.getSequenceNumber());
+      setMasterKeyId(builder.getMasterKeyId());
     }
   }
 
-  private long renewDate;
-
-  public long getRenewDate() {
-    return this.renewDate;
+  public void readFieldsOldFormat(DataInput di) throws IOException {
+    super.readFields(di);
   }
 
   /**
