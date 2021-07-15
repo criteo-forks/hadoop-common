@@ -240,7 +240,7 @@ public class NMLeveldbStateStoreService extends NMStateStoreService {
         rcs.status = RecoveredContainerStatus.COMPLETED;
         rcs.exitCode = Integer.parseInt(asString(entry.getValue()));
       } else {
-        throw new IOException("Unexpected container state key: " + key);
+        LOG.warn("Unexpected key during container recovery: " + key);
       }
     }
     return rcs;
