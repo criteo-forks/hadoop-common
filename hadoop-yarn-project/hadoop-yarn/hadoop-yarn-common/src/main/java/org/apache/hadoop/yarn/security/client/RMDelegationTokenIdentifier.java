@@ -19,6 +19,9 @@
 package org.apache.hadoop.yarn.security.client;
 
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -26,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
@@ -40,6 +44,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.RenewDelegationTokenRequest;
 import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.RMDelegationTokenIdentifierDataProto;
+import org.apache.hadoop.yarn.proto.YarnSecurityTokenProtos.YARNDelegationTokenIdentifierProto;
 import org.apache.hadoop.yarn.util.Records;
 
 /**
@@ -51,10 +57,36 @@ import org.apache.hadoop.yarn.util.Records;
 public class RMDelegationTokenIdentifier extends AbstractDelegationTokenIdentifier {
 
   public static final Text KIND_NAME = new Text("RM_DELEGATION_TOKEN");
-  
+
+  YARNDelegationTokenIdentifierProto.Builder builder = YARNDelegationTokenIdentifierProto.newBuilder();
+
   public RMDelegationTokenIdentifier() {
   }
-  
+
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    byte[] data = IOUtils.readFullyToByteArray(in);
+    try {
+      //HDP2 style
+      DataInput di = new DataInputStream(new ByteArrayInputStream(data));
+      this.readFieldsOldFormat(di);
+    } catch (IOException e) {
+      //HDP3 style based on proto
+      builder.mergeFrom(data);
+      setOwner(new Text(builder.getOwner()));
+      setRenewer(new Text(builder.getRenewer()));
+      setRealUser(new Text(builder.getRealUser()));
+      setIssueDate(builder.getIssueDate());
+      setMaxDate(builder.getMaxDate());
+      setSequenceNumber(builder.getSequenceNumber());
+      setMasterKeyId(builder.getMasterKeyId());
+    }
+  }
+
+  public void readFieldsOldFormat(DataInput di) throws IOException {
+    super.readFields(di);
+  }
+
   /**
    * Create a new delegation token identifier
    * @param owner the effective username of the token owner
